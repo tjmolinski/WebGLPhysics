@@ -213,19 +213,19 @@
     function handleKeys() {
         if (currentlyPressedKeys[37]) {
             // Left cursor key
-			particles[0].kick(4*effectiveFPMS, "left");
+			particles[0].kick(1*effectiveFPMS, "left");
 		}
         if (currentlyPressedKeys[39]) {
             // Right cursor key
-			particles[0].kick(4*effectiveFPMS, "right");
+			particles[0].kick(1*effectiveFPMS, "right");
         }
         if (currentlyPressedKeys[38]) {
             // Up cursor key
-			particles[0].kick(4*effectiveFPMS, "up");
+			particles[0].kick(1*effectiveFPMS, "up");
         }
         if (currentlyPressedKeys[40]) {
             // Down cursor key
-			particles[0].kick(4*effectiveFPMS, "down");
+			particles[0].kick(1*effectiveFPMS, "down");
         }
     }
 	
@@ -401,8 +401,6 @@
 		particles[3].pos[1] = 1;
 		particles[3].pos[2] = -10;
 
-		springs.push(new Spring(particles[1], particles[0], 2, 1.6));
-		springs.push(new Spring(particles[2], particles[0], 2, 1.6));
 		springs.push(new Spring(particles[3], particles[0], 3, 1.6));
 		springs.push(new Spring(particles[2], particles[3], 2, 1.6));
 		springs.push(new Spring(particles[1], particles[3], 2, 1.6));
