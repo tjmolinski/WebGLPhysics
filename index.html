@@ -361,7 +361,10 @@
 		{
 			var elapsed = timeNow - lastTime;
 			elapsed *= effectiveFPMS;
-			springs[0].updateForce(elapsed);
+			for(var p in springs)
+			{
+				springs[p].updateForce(elapsed);
+			}
 			for(var i in particles)
 			{
 				particles[i].animate(elapsed);
@@ -381,17 +384,28 @@
         var canvas = document.getElementById("webgl_physics");
         initGL(canvas);
         
-        for(var i=0; i < 2; i++)
-		{
-			particles.push(new Particle(.5,10,.9));
-			particles[i].pos[0] = i*4 - 1;
-			particles[i].pos[2] = -10;
-			//particles[i].forceAccum[0] = i * -0.5;
-			//particles[i].vel[1] = i * -0.01;
-		}
+		particles.push(new Particle(.5,10,.9));
+		particles[0].pos[0] = 0;
+		particles[0].pos[1] = 0;
+		particles[0].pos[2] = -10;
+		particles.push(new Particle(.5,10,.9));
+		particles[1].pos[0] = -1;
+		particles[1].pos[1] = 1;
+		particles[1].pos[2] = -10;
+		particles.push(new Particle(.5,10,.9));
+		particles[2].pos[0] = 1;
+		particles[2].pos[1] = 1;
+		particles[2].pos[2] = -10;
+		particles.push(new Particle(.5,10,.9));
+		particles[3].pos[0] = 0;
+		particles[3].pos[1] = 1;
+		particles[3].pos[2] = -10;
 
-		springs.push(new Spring(particles[0], particles[1], 1, 0.6));
-		//springs.push(new Spring(particles[1], particles[0], .5, .1));
+		springs.push(new Spring(particles[1], particles[0], 2, 1.6));
+		springs.push(new Spring(particles[2], particles[0], 2, 1.6));
+		springs.push(new Spring(particles[3], particles[0], 3, 1.6));
+		springs.push(new Spring(particles[2], particles[3], 2, 1.6));
+		springs.push(new Spring(particles[1], particles[3], 2, 1.6));
 		
         initShaders();
         initTexture();
