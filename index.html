@@ -6,6 +6,7 @@
 
 <script type="text/javascript" src="glMatrix-0.9.5.min.js"></script>
 <script type="text/javascript" src="webgl-utils.js"></script>
+<script type="text/javascript" src="particle.js"></script>
 
 <script id="shader-fs" type="x-shader/x-fragment">
     #ifdef GL_ES
@@ -71,6 +72,7 @@
     var mvMatrix = mat4.create();	//Model View Matrix
     var mvMatrixStack = [];			//Model View Matrix Stack
     var pMatrix = mat4.create();	//Projection Matrix
+	var currentlyPressedKeys = {};	//A buffer of key presses
 ////////////////////////////////////////////////////////////
 
     function initGL(canvas) {
@@ -174,153 +176,7 @@
 
         particleTexture.image.src = "particle.gif";
     }
-
-////////////////////////////////////////////////////////////
-//The particle object
-////////////////////////////////////////////////////////////
-	function Particle(radius, xPos, yPos, zPos, xVel, yVel, zVel)
-	{
-		this.radius = radius;
-		
-		var moonVertexPositionBuffer;
-    	var moonVertexNormalBuffer;
-    	var moonVertexTextureCoordBuffer;
-    	var moonVertexIndexBuffer;
-    	
-    	this.moonRotationMatrix = mat4.create();
-    	mat4.identity(this.moonRotationMatrix);
 	
-		this.xPos = xPos;
-		this.yPos = yPos;
-		this.zPos = zPos;
-		
-		this.xVel = xVel;
-		this.yVel = yVel;
-		this.zVel = zVel;
-	}
-
-	Particle.prototype.buffer = function()
-	{
-		
-        var latitudeBands = 30;
-        var longitudeBands = 30;
-        var rad_t = this.radius;
-
-        var vertexPositionData = [];
-        var normalData = [];
-        var textureCoordData = [];
-        for (var latNumber=0; latNumber <= latitudeBands; latNumber++) {
-            var theta = latNumber * Math.PI / latitudeBands;
-            var sinTheta = Math.sin(theta);
-            var cosTheta = Math.cos(theta);
-
-            for (var longNumber=0; longNumber <= longitudeBands; longNumber++) {
-                var phi = longNumber * 2 * Math.PI / longitudeBands;
-                var sinPhi = Math.sin(phi);
-                var cosPhi = Math.cos(phi);
-
-                var x = cosPhi * sinTheta;
-                var y = cosTheta;
-                var z = sinPhi * sinTheta;
-                var u = 1 - (longNumber / longitudeBands);
-                var v = 1 - (latNumber / latitudeBands);
-
-                normalData.push(x);
-                normalData.push(y);
-                normalData.push(z);
-                textureCoordData.push(u);
-                textureCoordData.push(v);
-                vertexPositionData.push(rad_t * x);
-                vertexPositionData.push(rad_t * y);
-                vertexPositionData.push(rad_t * z);
-            }
-        }
-
-        var indexData = [];
-        for (var latNumber=0; latNumber < latitudeBands; latNumber++) {
-            for (var longNumber=0; longNumber < longitudeBands; longNumber++) {
-                var first = (latNumber * (longitudeBands + 1)) + longNumber;
-                var second = first + longitudeBands + 1;
-                indexData.push(first);
-                indexData.push(second);
-                indexData.push(first + 1);
-
-                indexData.push(second);
-                indexData.push(second + 1);
-                indexData.push(first + 1);
-            }
-        }
-
-        moonVertexNormalBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexNormalBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normalData), gl.STATIC_DRAW);
-        moonVertexNormalBuffer.itemSize = 3;
-        moonVertexNormalBuffer.numItems = normalData.length / 3;
-
-        moonVertexTextureCoordBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexTextureCoordBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordData), gl.STATIC_DRAW);
-        moonVertexTextureCoordBuffer.itemSize = 2;
-        moonVertexTextureCoordBuffer.numItems = textureCoordData.length / 2;
-
-        moonVertexPositionBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexPositionBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexPositionData), gl.STATIC_DRAW);
-        moonVertexPositionBuffer.itemSize = 3;
-        moonVertexPositionBuffer.numItems = vertexPositionData.length / 3;
-
-        moonVertexIndexBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, moonVertexIndexBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexData), gl.STATIC_DRAW);
-        moonVertexIndexBuffer.itemSize = 1;
-        moonVertexIndexBuffer.numItems = indexData.length;
-	}
-
-	Particle.prototype.animate = function(elapsed)
-	{    	
-		this.xPos += this.xVel * effectiveFPMS * elapsed;
-		this.yPos += this.yVel * effectiveFPMS * elapsed; 
-		this.zPos += this.zVel * effectiveFPMS * elapsed;
-		
-		//The bounding box of the particles movement
-		if(this.xPos >= 4 || this.xPos <= -4)
-			this.xVel = -this.xVel;
-			
-		if(this.yPos >= 4 || this.yPos <= -4)
-			this.yVel = -this.yVel;
-			
-		if(this.zPos >= -9 || this.zPos <= -24)
-			this.zVel = -this.zVel;
-	}
-	
-	Particle.prototype.draw = function()
-	{
-		mat4.identity(mvMatrix);
-
-        mat4.translate(mvMatrix, [this.xPos, this.yPos, this.zPos]);
-		
-        mat4.multiply(mvMatrix, this.moonRotationMatrix);
-
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, particleTexture);
-        gl.uniform1i(shaderProgram.samplerUniform, 0);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexPositionBuffer);
-        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, moonVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexTextureCoordBuffer);
-        gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, moonVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, moonVertexNormalBuffer);
-        gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute, moonVertexNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, moonVertexIndexBuffer);
-        setMatrixUniforms();
-        gl.drawElements(gl.TRIANGLES, moonVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-	}
-
-////////////////////////////////////////////////////////////
-
     function mvPushMatrix() {
         var copy = mat4.create();
         mat4.set(mvMatrix, copy);
@@ -344,6 +200,33 @@
         gl.uniformMatrix3fv(shaderProgram.nMatrixUniform, false, normalMatrix);
     }
 
+    function handleKeyDown(event) {
+        currentlyPressedKeys[event.keyCode] = true;
+    }
+
+    function handleKeyUp(event) {
+        currentlyPressedKeys[event.keyCode] = false;
+    }
+
+    function handleKeys() {
+        if (currentlyPressedKeys[37]) {
+            // Left cursor key
+			particles[0].kick(4*effectiveFPMS, "left");
+		}
+        if (currentlyPressedKeys[39]) {
+            // Right cursor key
+			particles[0].kick(4*effectiveFPMS, "right");
+        }
+        if (currentlyPressedKeys[38]) {
+            // Up cursor key
+			particles[0].kick(4*effectiveFPMS, "up");
+        }
+        if (currentlyPressedKeys[40]) {
+            // Down cursor key
+			particles[0].kick(4*effectiveFPMS, "down");
+        }
+    }
+	
     function degToRad(degrees) {
         return degrees * Math.PI / 180;
     }
@@ -384,12 +267,90 @@
 
 		for(var i in particles)
 		{
-			particles[i].buffer();
 			particles[i].draw();
 		}	
 
     }
 
+	function initBuffers()
+	{
+        var latitudeBands = 30;
+        var longitudeBands = 30;
+		for (var tmp in particles)
+		{
+			var rad_t = particles[tmp].radius;
+			var vertexPositionData = [];
+			var normalData = [];
+			var textureCoordData = [];
+			
+			for (var latNumber=0; latNumber <= latitudeBands; latNumber++) {
+				var theta = latNumber * Math.PI / latitudeBands;
+				var sinTheta = Math.sin(theta);
+				var cosTheta = Math.cos(theta);
+
+				for (var longNumber=0; longNumber <= longitudeBands; longNumber++) {
+					var phi = longNumber * 2 * Math.PI / longitudeBands;
+					var sinPhi = Math.sin(phi);
+					var cosPhi = Math.cos(phi);
+
+					var x = cosPhi * sinTheta;
+					var y = cosTheta;
+					var z = sinPhi * sinTheta;
+					var u = 1 - (longNumber / longitudeBands);
+					var v = 1 - (latNumber / latitudeBands);
+
+					normalData.push(x);
+					normalData.push(y);
+					normalData.push(z);
+					textureCoordData.push(u);
+					textureCoordData.push(v);
+					vertexPositionData.push(rad_t * x);
+					vertexPositionData.push(rad_t * y);
+					vertexPositionData.push(rad_t * z);
+				}
+			}
+
+			var indexData = [];
+			for (var latNumber=0; latNumber < latitudeBands; latNumber++) {
+				for (var longNumber=0; longNumber < longitudeBands; longNumber++) {
+					var first = (latNumber * (longitudeBands + 1)) + longNumber;
+					var second = first + longitudeBands + 1;
+					indexData.push(first);
+					indexData.push(second);
+					indexData.push(first + 1);
+
+					indexData.push(second);
+					indexData.push(second + 1);
+					indexData.push(first + 1);
+				}
+			}
+
+			particles[tmp].vertexNormalBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, particles[tmp].vertexNormalBuffer);
+			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(normalData), gl.STATIC_DRAW);
+			particles[tmp].vertexNormalBuffer.itemSize = 3;
+			particles[tmp].vertexNormalBuffer.numItems = normalData.length / 3;
+
+			particles[tmp].vertexTextureCoordBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, particles[tmp].vertexTextureCoordBuffer);
+			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordData), gl.STATIC_DRAW);
+			particles[tmp].vertexTextureCoordBuffer.itemSize = 2;
+			particles[tmp].vertexTextureCoordBuffer.numItems = textureCoordData.length / 2;
+
+			particles[tmp].vertexPositionBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, particles[tmp].vertexPositionBuffer);
+			gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexPositionData), gl.STATIC_DRAW);
+			particles[tmp].vertexPositionBuffer.itemSize = 3;
+			particles[tmp].vertexPositionBuffer.numItems = vertexPositionData.length / 3;
+
+			particles[tmp].vertexIndexBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, particles[tmp].vertexIndexBuffer);
+			gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexData), gl.STATIC_DRAW);
+			particles[tmp].vertexIndexBuffer.itemSize = 1;
+			particles[tmp].vertexIndexBuffer.numItems = indexData.length;
+		}
+	}
+	
 	function animate()
 	{
 		var timeNow = new Date().getTime();
@@ -401,29 +362,35 @@
 		}
 		lastTime = timeNow;
 	}
-
+	
     function tick() {
         requestAnimFrame(tick);
+        handleKeys();
         drawScene();
         animate();
     }
 
-
     function webGLStart() {
         var canvas = document.getElementById("webgl_physics");
         initGL(canvas);
-        initShaders();
-        initTexture();
         
-        for(var i=0; i < 3; i++)
+        for(var i=0; i < 5; i++)
 		{
-			particles.push(new Particle(Math.random(),
-					i*2 - 1.5, 0, -16,
-					0,0,0));//0.2 * Math.random() - 0.1, 0.2 * Math.random() - 0.1, 0.2 * Math.random() - 0.1));
+			particles.push(new Particle(
+					Math.random(),		//Here we have the radius of the particle
+					i*2 - 1.5, 0, -16,	//Here is the position of the particle
+					0.2 * Math.random() - 0.1, 0.2 * Math.random() - 0.1, 0.2 * Math.random() - 0.1));	//Here we calculate the inital velocity of the particle
 		}
 
+        initShaders();
+        initTexture();
+		initBuffers();
+		
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.enable(gl.DEPTH_TEST);
+		
+        document.onkeydown = handleKeyDown;
+        document.onkeyup = handleKeyUp;
 
         tick();
     }
