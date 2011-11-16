@@ -7,6 +7,7 @@
 <script type="text/javascript" src="glMatrix-0.9.5.min.js"></script>
 <script type="text/javascript" src="webgl-utils.js"></script>
 <script type="text/javascript" src="particle.js"></script>
+<script type="text/javascript" src="spring.js"></script>
 
 <script id="shader-fs" type="x-shader/x-fragment">
     #ifdef GL_ES
@@ -63,8 +64,9 @@
 ////////////////////////////////////////////////////////////
 //Global Variables
 ////////////////////////////////////////////////////////////
-	var effectiveFPMS = 60/1000;	//60 Frames per ms
+	var effectiveFPMS = 60/1000;	//Frames per millisecond
 	var lastTime = 0;				//Time of the last frame
+	var springs = Array();
 	var particles = Array();		//The list of particles
     var particleTexture;			//A texture used for the particles
     var gl;							//The gl program
@@ -354,11 +356,16 @@
 	function animate()
 	{
 		var timeNow = new Date().getTime();
+		
 		if(lastTime != 0)
 		{
 			var elapsed = timeNow - lastTime;
+			elapsed *= effectiveFPMS;
+			springs[0].updateForce(elapsed);
 			for(var i in particles)
+			{
 				particles[i].animate(elapsed);
+			}
 		}
 		lastTime = timeNow;
 	}
@@ -374,14 +381,18 @@
         var canvas = document.getElementById("webgl_physics");
         initGL(canvas);
         
-        for(var i=0; i < 5; i++)
+        for(var i=0; i < 2; i++)
 		{
-			particles.push(new Particle(
-					Math.random(),		//Here we have the radius of the particle
-					i*2 - 1.5, 0, -16,	//Here is the position of the particle
-					0.2 * Math.random() - 0.1, 0.2 * Math.random() - 0.1, 0.2 * Math.random() - 0.1));	//Here we calculate the inital velocity of the particle
+			particles.push(new Particle(.5,10,.9));
+			particles[i].pos[0] = i*4 - 1;
+			particles[i].pos[2] = -10;
+			//particles[i].forceAccum[0] = i * -0.5;
+			//particles[i].vel[1] = i * -0.01;
 		}
 
+		springs.push(new Spring(particles[0], particles[1], 1, 0.6));
+		//springs.push(new Spring(particles[1], particles[0], .5, .1));
+		
         initShaders();
         initTexture();
 		initBuffers();

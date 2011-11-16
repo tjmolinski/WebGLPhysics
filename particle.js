@@ -1,10 +1,8 @@
 ////////////////////////////////////////////////////////////
 //The particle object
 ////////////////////////////////////////////////////////////
-function Particle(radius, xPos, yPos, zPos, xVel, yVel, zVel)
+function Particle(radius_t, mass_t, damp_t)
 {
-	this.radius = radius;
-	
 	this.vertexPositionBuffer;
 	this.vertexNormalBuffer;
 	this.vertexTextureCoordBuffer;
@@ -13,8 +11,13 @@ function Particle(radius, xPos, yPos, zPos, xVel, yVel, zVel)
 	this.particleRotationMatrix = mat4.create();
 	mat4.identity(this.particleRotationMatrix);
 
-	this.pos = [xPos, yPos, zPos];
-	this.vel = [xVel, yVel, zVel];
+	this.radius = radius_t;
+	this.mass = mass_t;
+	this.damping = damp_t;
+	this.pos = [0, 0, 0];
+	this.vel = [0, 0, 0];
+	this.forceAccum = [0, 0, 0];
+	this.acc = [0, 0, 0];
 }
 
 Particle.prototype.kick = function(a,b)
@@ -38,25 +41,35 @@ Particle.prototype.kick = function(a,b)
 
 Particle.prototype.animate = function(elapsed)
 {    	
-	this.pos[0] += this.vel[0] * effectiveFPMS * elapsed;
-	this.pos[1] += this.vel[1] * effectiveFPMS * elapsed;
-	this.pos[2] += this.vel[2] * effectiveFPMS * elapsed;
+	if(this.mass <= 0)
+		return;
+
+	this.pos[0] += this.vel[0] * elapsed;
+	this.pos[1] += this.vel[1] * elapsed;
+	this.pos[2] += this.vel[2] * elapsed;
 	
-	//The bounding box of the particles movement
-	if(this.pos[0] > 4)
-		this.vel[0] = -this.vel[0], this.pos[0] = 4;
-	else if(this.pos[0] < -4)
-		this.vel[0] = -this.vel[0], this.pos[0] = -4;
+	var tmpX = this.acc[0];
+	var tmpY = this.acc[1];
+	var tmpZ = this.acc[2];
+	tmpX += this.forceAccum[0] * 1/this.mass;
+	tmpY += this.forceAccum[1] * 1/this.mass;
+	tmpZ += this.forceAccum[2] * 1/this.mass;
+	
+	this.vel[0] += tmpX * elapsed;
+	this.vel[1] += tmpY * elapsed;
+	this.vel[2] += tmpZ * elapsed;
 		
+	this.vel[0] *= Math.pow(this.damping, elapsed);
+	this.vel[1] *= Math.pow(this.damping, elapsed);
+	this.vel[2] *= Math.pow(this.damping, elapsed);	
+	
+	//The bounding box of the particles movement		
 	if(this.pos[1] > 4)
 		this.vel[1] = -this.vel[1], this.pos[1] = 4;
 	else if(this.pos[1] < -4)
 		this.vel[1] = -this.vel[1], this.pos[1] = -4;
 		
-	if(this.pos[2] > -9)
-		this.vel[2] = -this.vel[2], this.pos[2] = -9;
-	else if(this.pos[2] < -24)
-		this.vel[2] = -this.vel[2], this.pos[2] = -24;
+	this.forceAccum = [0, 0, 0];
 }
 
 Particle.prototype.draw = function()
