@@ -8,6 +8,7 @@
 <script type="text/javascript" src="webgl-utils.js"></script>
 <script type="text/javascript" src="particle.js"></script>
 <script type="text/javascript" src="spring.js"></script>
+<script type="text/javascript" src="stiffspring.js"></script>
 <script type="text/javascript" src="bungee.js"></script>
 
 <script id="shader-fs" type="x-shader/x-fragment">
@@ -67,8 +68,10 @@
 ////////////////////////////////////////////////////////////
 	var effectiveFPMS = 60/1000;	//Frames per millisecond
 	var lastTime = 0;				//Time of the last frame
-	var bungees = Array();
-	var springs = Array();
+	var KICKFORCE = 50;				//The amount of force applied to kicking particles
+	var stiffies = Array();			//The list of stiff springs
+	var bungees = Array();			//The list of bungees
+	var springs = Array();			//The list of springs
 	var particles = Array();		//The list of particles
     var particleTexture;			//A texture used for the particles
     var gl;							//The gl program
@@ -215,19 +218,19 @@
     function handleKeys() {
         if (currentlyPressedKeys[37]) {
             // Left cursor key
-			particles[0].kick(1*effectiveFPMS, "left");
+			particles[1].kick(KICKFORCE*effectiveFPMS, "left");
 		}
         if (currentlyPressedKeys[39]) {
             // Right cursor key
-			particles[0].kick(1*effectiveFPMS, "right");
+			particles[1].kick(KICKFORCE*effectiveFPMS, "right");
         }
         if (currentlyPressedKeys[38]) {
             // Up cursor key
-			particles[0].kick(1*effectiveFPMS, "up");
+			particles[1].kick(KICKFORCE*effectiveFPMS, "up");
         }
         if (currentlyPressedKeys[40]) {
             // Down cursor key
-			particles[0].kick(1*effectiveFPMS, "down");
+			particles[1].kick(KICKFORCE*effectiveFPMS, "down");
         }
     }
 	
@@ -363,6 +366,10 @@
 		{
 			var elapsed = timeNow - lastTime;
 			elapsed *= effectiveFPMS;
+			for(var q in stiffies)
+			{
+				stiffies[q].updateForce(elapsed);
+			}
 			for(var p in springs)
 			{
 				springs[p].updateForce(elapsed);
@@ -390,16 +397,17 @@
         var canvas = document.getElementById("webgl_physics");
         initGL(canvas);
         
-		particles.push(new Particle(.5,0,.8));
+		particles.push(new Particle(.5,0,0.8));
 		particles[0].pos[0] = 0;
 		particles[0].pos[1] = 0;
 		particles[0].pos[2] = -10;
-		particles.push(new Particle(.5,10,.8));
+		particles.push(new Particle(.5,10,0.8));
 		particles[1].pos[0] = 0;
-		particles[1].pos[1] = 1;
+		particles[1].pos[1] = 0;
 		particles[1].pos[2] = -10;
 		
-		bungees.push(new Bungee(particles[1], particles[0], 1, 0.5));
+		stiffies.push(new StiffSpring(particles[1], particles[0], 0.8, 0.5));
+		//bungees.push(new Bungee(particles[1], particles[0], 1, 0.5));
 		/*particles.push(new Particle(.5,10,.8));
 		particles[0].pos[0] = 0;
 		particles[0].pos[1] = 0;

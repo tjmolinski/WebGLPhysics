@@ -14,10 +14,10 @@ function Particle(radius_t, mass_t, damp_t)
 	this.radius = radius_t;
 	this.mass = mass_t;
 	this.damping = damp_t;
-	this.pos = [0, 0, 0];
-	this.vel = [0, 0, 0];
-	this.forceAccum = [0, 0, 0];
-	this.acc = [0, -.01, 0];
+	this.pos = [0.0, 0.0, 0.0];
+	this.vel = [0.0, 0.0, 0.0];
+	this.forceAccum = [0.0, 0.0, 0.0];
+	this.acc = [0.0, -.001, 0.0];
 }
 
 Particle.prototype.kick = function(a,b)
@@ -41,7 +41,7 @@ Particle.prototype.kick = function(a,b)
 
 Particle.prototype.animate = function(elapsed)
 {    	
-	if(this.mass <= 0)
+	if(this.mass <= 0.0)
 		return;
 
 	this.pos[0] += this.vel[0] * elapsed;
@@ -51,9 +51,9 @@ Particle.prototype.animate = function(elapsed)
 	var tmpX = this.acc[0];
 	var tmpY = this.acc[1];
 	var tmpZ = this.acc[2];
-	tmpX += this.forceAccum[0] * 1/this.mass;
-	tmpY += this.forceAccum[1] * 1/this.mass;
-	tmpZ += this.forceAccum[2] * 1/this.mass;
+	tmpX += this.forceAccum[0] * 1.0/this.mass;
+	tmpY += this.forceAccum[1] * 1.0/this.mass;
+	tmpZ += this.forceAccum[2] * 1.0/this.mass;
 	
 	this.vel[0] += tmpX * elapsed;
 	this.vel[1] += tmpY * elapsed;
@@ -63,7 +63,7 @@ Particle.prototype.animate = function(elapsed)
 	this.vel[1] *= Math.pow(this.damping, elapsed);
 	this.vel[2] *= Math.pow(this.damping, elapsed);	
 		
-	this.forceAccum = [0, 0, 0];
+	this.forceAccum = [0.0, 0.0, 0.0];
 	
 	//The bounding box of the particles movement	
 	if(this.pos[1] < -3.5)
