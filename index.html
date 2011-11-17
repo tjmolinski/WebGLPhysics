@@ -8,6 +8,7 @@
 <script type="text/javascript" src="webgl-utils.js"></script>
 <script type="text/javascript" src="particle.js"></script>
 <script type="text/javascript" src="spring.js"></script>
+<script type="text/javascript" src="bungee.js"></script>
 
 <script id="shader-fs" type="x-shader/x-fragment">
     #ifdef GL_ES
@@ -66,6 +67,7 @@
 ////////////////////////////////////////////////////////////
 	var effectiveFPMS = 60/1000;	//Frames per millisecond
 	var lastTime = 0;				//Time of the last frame
+	var bungees = Array();
 	var springs = Array();
 	var particles = Array();		//The list of particles
     var particleTexture;			//A texture used for the particles
@@ -365,6 +367,10 @@
 			{
 				springs[p].updateForce(elapsed);
 			}
+			for(var o in bungees)
+			{
+				bungees[o].updateForce(elapsed);
+			}
 			for(var i in particles)
 			{
 				particles[i].animate(elapsed);
@@ -384,19 +390,29 @@
         var canvas = document.getElementById("webgl_physics");
         initGL(canvas);
         
-		particles.push(new Particle(.5,10,.9));
+		particles.push(new Particle(.5,0,.8));
 		particles[0].pos[0] = 0;
 		particles[0].pos[1] = 0;
 		particles[0].pos[2] = -10;
-		particles.push(new Particle(.5,10,.9));
+		particles.push(new Particle(.5,10,.8));
+		particles[1].pos[0] = 0;
+		particles[1].pos[1] = 1;
+		particles[1].pos[2] = -10;
+		
+		bungees.push(new Bungee(particles[1], particles[0], 1, 0.5));
+		/*particles.push(new Particle(.5,10,.8));
+		particles[0].pos[0] = 0;
+		particles[0].pos[1] = 0;
+		particles[0].pos[2] = -10;
+		particles.push(new Particle(.5,10,.8));
 		particles[1].pos[0] = -1;
 		particles[1].pos[1] = 1;
 		particles[1].pos[2] = -10;
-		particles.push(new Particle(.5,10,.9));
+		particles.push(new Particle(.5,10,.8));
 		particles[2].pos[0] = 1;
 		particles[2].pos[1] = 1;
 		particles[2].pos[2] = -10;
-		particles.push(new Particle(.5,10,.9));
+		particles.push(new Particle(.5,10,.8));
 		particles[3].pos[0] = 0;
 		particles[3].pos[1] = 1;
 		particles[3].pos[2] = -10;
@@ -404,7 +420,7 @@
 		springs.push(new Spring(particles[3], particles[0], 3, 1.6));
 		springs.push(new Spring(particles[2], particles[3], 2, 1.6));
 		springs.push(new Spring(particles[1], particles[3], 2, 1.6));
-		
+		*/
         initShaders();
         initTexture();
 		initBuffers();
@@ -426,7 +442,8 @@
 
 <body onload="webGLStart();">
     <canvas id="webgl_physics" style="border: none;" width="500" height="500"></canvas>
-    <br/>
+    
+	<br/>
 
     <input type="checkbox" id="lighting" checked /> Use lighting<br/>
     <br/>
