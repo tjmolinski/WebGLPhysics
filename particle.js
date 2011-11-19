@@ -17,7 +17,7 @@ function Particle(radius_t, mass_t, damp_t)
 	this.pos = [0.0, 0.0, 0.0];
 	this.vel = [0.0, 0.0, 0.0];
 	this.forceAccum = [0.0, 0.0, 0.0];
-	this.acc = [0.0, -.001, 0.0];
+	this.acc = [0.0, -9.8, 0.0];
 }
 
 Particle.prototype.kick = function(a,b)
@@ -67,7 +67,10 @@ Particle.prototype.animate = function(elapsed)
 	
 	//The bounding box of the particles movement	
 	if(this.pos[1] < -3.5)
+	{
 		this.pos[1] = -3.5;
+		this.vel[1] = 0;
+	}
 }
 
 Particle.prototype.draw = function()
