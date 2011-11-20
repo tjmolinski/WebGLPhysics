@@ -25,16 +25,16 @@ Particle.prototype.kick = function(a,b)
 	switch(b)
 	{
 	case "up":
-		this.forceAccum[1] += a;
+		this.vel[1] += a;
 		break;
 	case "down":
-		this.forceAccum[1] -= a;
+		this.vel[1] -= a;
 		break;
 	case "left":
-		this.forceAccum[0] -= a;
+		this.vel[0] -= a;
 		break;
 	case "right":
-		this.forceAccum[0] += a;
+		this.vel[0] += a;
 		break;
 	}
 }
@@ -69,7 +69,7 @@ Particle.prototype.animate = function(elapsed)
 	if(this.pos[1] < -3.5)
 	{
 		this.pos[1] = -3.5;
-		this.vel[1] = 0;
+		this.vel[1] = -this.vel[1];
 	}
 }
 
