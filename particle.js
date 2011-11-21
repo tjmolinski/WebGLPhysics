@@ -69,7 +69,7 @@ Particle.prototype.animate = function(elapsed)
 	if(this.pos[1] < -3.5)
 	{
 		this.pos[1] = -3.5;
-		this.vel[1] = -this.vel[1];
+		this.vel[1] = 0;//-this.vel[1];
 	}
 }
 

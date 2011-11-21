@@ -15,25 +15,23 @@ function CollisionHandler(p1, p2, rest_t)
 	this.cNormal[1] /= tmp;
 	this.cNormal[2] /= tmp;
 	
-	distX = this.particle1.pos[0] - this.particle2.pos[0];
-	distY = this.particle1.pos[1] - this.particle2.pos[1];
-	distZ = this.particle1.pos[2] - this.particle2.pos[2];
-	this.distance = Math.sqrt(distX*distX+distY*distY+distZ*distZ);
+	this.distX = this.particle1.pos[0] - this.particle2.pos[0];
+	this.distY = this.particle1.pos[1] - this.particle2.pos[1];
+	this.distZ = this.particle1.pos[2] - this.particle2.pos[2];
+	this.distance = Math.sqrt(this.distX*this.distX+this.distY*this.distY+this.distZ*this.distZ);
+	
+	this.penetration = this.particle1.radius+this.particle2.radius-this.distance;
 }
 
 CollisionHandler.prototype.resolve = function(elapsed)
 {    	
-	if(this.distance <= this.particle1.radius+this.particle2.radius)
-	{
-		this.penetration = this.particle1.radius+this.particle2.radius-this.distance;
-		this.resolveVelocity(elapsed);
-		this.resolveInterpenetration(elapsed);
-	}
+	this.resolveVelocity(elapsed);
+	this.resolveInterpenetration(elapsed);
 }
 	
 CollisionHandler.prototype.resolveInterpenetration = function()
 {    	
-	if(this.penetration >= 0)
+	if(this.penetration <= 0)
 		return;
 		
 	totalIMass = 1.0/this.particle1.mass + 1.0/this.particle2.mass;

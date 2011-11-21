@@ -11,6 +11,7 @@
 <script type="text/javascript" src="stiffspring.js"></script>
 <script type="text/javascript" src="bungee.js"></script>
 <script type="text/javascript" src="collisionhandler.js"></script>
+<script type="text/javascript" src="contactresolver.js"></script>
 
 <script id="shader-fs" type="x-shader/x-fragment">
     #ifdef GL_ES
@@ -67,9 +68,9 @@
 ////////////////////////////////////////////////////////////
 //Global Variables
 ////////////////////////////////////////////////////////////
-	var effectiveFPMS = 6/100000;	//Frames per millisecond
+	var effectiveFPMS = 60/100000;	//Frames per millisecond
 	var lastTime = 0;				//Time of the last frame
-	var KICKFORCE = 5000;				//The amount of force applied to kicking particles
+	var KICKFORCE = 50;				//The amount of force applied to kicking particles
 	var stiffies = Array();			//The list of stiff springs
 	var bungees = Array();			//The list of bungees
 	var springs = Array();			//The list of springs
@@ -82,7 +83,7 @@
     var pMatrix = mat4.create();	//Projection Matrix
 	var currentlyPressedKeys = {};	//A buffer of key presses
 	
-	var collisions = Array();
+	var contacts = Array();
 ////////////////////////////////////////////////////////////
 
     function initGL(canvas) {
@@ -367,6 +368,7 @@
 		
 		if(lastTime != 0)
 		{
+			var cNum = 0;
 			var elapsed = timeNow - lastTime;
 			elapsed *= effectiveFPMS;
 			
@@ -382,6 +384,8 @@
 			{
 				bungees[o].updateForce(elapsed);
 			}
+			
+			//This is finding all the collisions
 			for(var i=0; i < particles.length; i++)
 			{		
 				for(var u=0; u < particles.length; u++)
@@ -389,15 +393,44 @@
 					if(i == u)
 						continue;
 				
-					tmp = new CollisionHandler(particles[i], particles[u], 0.25);
-					tmp.resolve(elapsed);
-					delete tmp;
-					
-					particles[i].animate(elapsed);
-					particles[u].animate(elapsed);
+					var distX = particles[i].pos[0] - particles[u].pos[0];
+					var distY = particles[i].pos[1] - particles[u].pos[1];
+					var distZ = particles[i].pos[2] - particles[u].pos[2];
+					var distance = Math.sqrt(distX*distX+distY*distY+distZ*distZ);
+					if(distance <= particles[i].radius+particles[u].radius)
+					{
+						
+						contacts.push(new CollisionHandler(particles[i], particles[u], 0.0));
+						cNum++;
+					}
 				}
 			}
+			
+			//This is removing the collisions between the same particles
+			//It adds it twice with my for loop
+			for(var w in contacts)
+			{
+				for(var x in contacts)
+				{
+					if(contacts[w].particle1 == contacts[x].particle2)
+					{
+						contacts.splice(x,1);
+						cNum--;
+					}
+				}
+			}
+			
+			if(cNum > 0)
+			{
+				tmp = new CollisionResolver(1, contacts, cNum, elapsed);
+				tmp.resolveCollisions();
+				delete tmp;
+			}
+			
+			for(var t in particles)
+				particles[t].animate(elapsed);
 		}
+		
 		lastTime = timeNow;
 	}
 	
@@ -412,12 +445,12 @@
         var canvas = document.getElementById("webgl_physics");
         initGL(canvas);
         
-		for(var k=0; k < 10; k++)
+		for(var k=0; k < 2; k++)
 		{
 			t = Math.random()*0.25+0.25;
-			particles.push(new Particle(t,t/2,0.8));
-			particles[k].pos[0] = k-5;
-			particles[k].pos[1] = k;
+			particles.push(new Particle(.25,5,0.8));
+			particles[k].pos[1] = -k*2+2;
+			particles[k].pos[0] = 0;
 			particles[k].pos[2] = -10;
 		}
 		
