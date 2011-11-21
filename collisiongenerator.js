@@ -1,14 +1,13 @@
 ////////////////////////////////////////////////////////////
 //The collision handler
 ////////////////////////////////////////////////////////////
-function CollisionGenerator(p1, p2, dist, collisionNormal, rest_t)
+function CollisionGenerator(p1, p2, p, collisionNormal, rest_t)
 {
 	this.particle1 = p1;
 	this.particle2 = p2;
 	this.restitution = rest_t;
 	this.cNormal = collisionNormal;
-	this.distance = dist;
-	this.penetration = this.particle1.radius+this.particle2.radius-this.distance;
+	this.penetration = p;
 }
 
 CollisionGenerator.prototype.resolve = function(elapsed)

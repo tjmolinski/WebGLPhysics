@@ -34,7 +34,9 @@ Cable.prototype.updateForce = function(elapsed)
 	if (dist < this.maxL)
 		return;
 		
-	tmp = new CollisionGenerator(this.particle1, this.particle2, dist, this.cNormal, this.restituion);
+	pen = dist - this.maxL;
+		
+	tmp = new CollisionGenerator(this.particle1, this.particle2, pen, this.cNormal, this.restituion);
 	tmp.resolve(elapsed);
 	delete tmp;
 }

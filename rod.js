@@ -42,7 +42,9 @@ Rod.prototype.updateForce = function(elapsed)
 	if (dist == this.len)
 		return;
 		
-	tmp = new CollisionGenerator(this.particle1, this.particle2, dist, this.cNormal, 0.0);
+	pen = Math.abs(dist-this.len);
+	
+	tmp = new CollisionGenerator(this.particle1, this.particle2, pen, this.cNormal, 0.0);
 	tmp.resolve(elapsed);
 	delete tmp;
 }

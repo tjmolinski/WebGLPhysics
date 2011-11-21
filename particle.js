@@ -25,16 +25,16 @@ Particle.prototype.kick = function(a,b)
 	switch(b)
 	{
 	case "up":
-		this.vel[1] += a;
+		this.forceAccum[1] += a;
 		break;
 	case "down":
-		this.vel[1] -= a;
+		this.forceAccum[1] -= a;
 		break;
 	case "left":
-		this.vel[0] -= a;
+		this.forceAccum[0] -= a;
 		break;
 	case "right":
-		this.vel[0] += a;
+		this.forceAccum[0] += a;
 		break;
 	}
 }
