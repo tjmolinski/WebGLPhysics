@@ -1,5 +1,7 @@
 ////////////////////////////////////////////////////////////
 //The collision resolver
+//NOT BEING USED IN THE CURRENT CODE!!!!!!
+//Would break the system if used
 ////////////////////////////////////////////////////////////
 function CollisionResolver(i, cArray, numContacts, duration)
 {
@@ -13,6 +15,7 @@ function CollisionResolver(i, cArray, numContacts, duration)
 CollisionResolver.prototype.resolveCollisions = function()
 {    	
 	this.iterationUsed = 0;
+	
 	while(this.iterationUsed < this.iteration)
 	{
 		var max = 999999;
@@ -32,8 +35,7 @@ CollisionResolver.prototype.resolveCollisions = function()
 			break;
 			
 		this.list[maxIndex].resolve(this.time);
-		this.list.splice(maxIndex,1);
-		
 		this.iterationUsed++;
 	}
+	
 }

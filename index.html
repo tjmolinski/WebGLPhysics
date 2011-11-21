@@ -10,6 +10,8 @@
 <script type="text/javascript" src="spring.js"></script>
 <script type="text/javascript" src="stiffspring.js"></script>
 <script type="text/javascript" src="bungee.js"></script>
+<script type="text/javascript" src="cable.js"></script>
+<script type="text/javascript" src="rod.js"></script>
 <script type="text/javascript" src="collisiongenerator.js"></script>
 <script type="text/javascript" src="collisionresolver.js"></script>
 
@@ -72,9 +74,12 @@
 	var lastTime = 0;				//Time of the last frame
 	var KICKFORCE = 50;				//The amount of force applied to kicking particles
 	var stiffies = Array();			//The list of stiff springs
+	var cables = Array();
+	var rods = Array();
 	var bungees = Array();			//The list of bungees
 	var springs = Array();			//The list of springs
 	var particles = Array();		//The list of particles
+	var contacts = Array();			//The list of collisions
     var particleTexture;			//A texture used for the particles
     var gl;							//The gl program
     var shaderProgram;				//The shader program
@@ -82,8 +87,6 @@
     var mvMatrixStack = [];			//Model View Matrix Stack
     var pMatrix = mat4.create();	//Projection Matrix
 	var currentlyPressedKeys = {};	//A buffer of key presses
-	
-	var contacts = Array();
 ////////////////////////////////////////////////////////////
 
     function initGL(canvas) {
@@ -223,22 +226,22 @@
         if (currentlyPressedKeys[37]) {
             // Left cursor key
 			particles[0].kick(KICKFORCE*effectiveFPMS, "right");
-			particles[particles.length-1].kick(KICKFORCE*effectiveFPMS, "left");
+			//particles[particles.length-1].kick(KICKFORCE*effectiveFPMS, "left");
 		}
         if (currentlyPressedKeys[39]) {
             // Right cursor key
 			particles[0].kick(KICKFORCE*effectiveFPMS, "left");
-			particles[particles.length-1].kick(KICKFORCE*effectiveFPMS, "right");
+			//particles[particles.length-1].kick(KICKFORCE*effectiveFPMS, "right");
         }
         if (currentlyPressedKeys[38]) {
             // Up cursor key
 			particles[0].kick(KICKFORCE*effectiveFPMS, "down");
-			particles[particles.length-1].kick(KICKFORCE*effectiveFPMS, "up");
+			//particles[particles.length-1].kick(KICKFORCE*effectiveFPMS, "up");
         }
         if (currentlyPressedKeys[40]) {
             // Down cursor key
 			particles[0].kick(KICKFORCE*effectiveFPMS, "up");
-			particles[particles.length-1].kick(KICKFORCE*effectiveFPMS, "down");
+			//particles[particles.length-1].kick(KICKFORCE*effectiveFPMS, "down");
         }
     }
 	
@@ -372,10 +375,17 @@
 		
 		if(lastTime != 0)
 		{
-			var cNum = 0;
 			var elapsed = timeNow - lastTime;
 			elapsed *= effectiveFPMS;
 			
+			for(var l in cables)
+			{
+				cables[l].updateForce(elapsed);
+			}
+			for(var h in rods)
+			{
+				rods[h].updateForce(elapsed);
+			}
 			for(var q in stiffies)
 			{
 				stiffies[q].updateForce(elapsed);
@@ -389,46 +399,32 @@
 				bungees[o].updateForce(elapsed);
 			}
 			
-			//This is finding all the collisions
-			for(var i=0; i < particles.length; i++)
-			{		
-				for(var u=0; u < particles.length; u++)
-				{
-					if(i == u)
-						continue;
-				
-					var distX = particles[i].pos[0] - particles[u].pos[0];
-					var distY = particles[i].pos[1] - particles[u].pos[1];
-					var distZ = particles[i].pos[2] - particles[u].pos[2];
-					var distance = Math.sqrt(distX*distX+distY*distY+distZ*distZ);
-					if(distance < particles[i].radius+particles[u].radius)
+			if (document.getElementById("collisions").checked) 
+			{
+				//This is finding all the collisions
+				//then it handles the collisions that happen first
+				for(var i=0; i < particles.length; i++)
+				{		
+					for(var u=0; u < particles.length; u++)
 					{
-						contacts.push(new CollisionHandler(particles[i], particles[u], parseFloat(document.getElementById("restitutionID").value)));
-						cNum++;
+						if(i == u)
+							continue;
+					
+						var distX = particles[i].pos[0] - particles[u].pos[0];
+						var distY = particles[i].pos[1] - particles[u].pos[1];
+						var distZ = particles[i].pos[2] - particles[u].pos[2];
+						var distance = Math.sqrt(distX*distX+distY*distY+distZ*distZ);
+						
+						var cNorm = [distX/distance, distY/distance, distZ/distance];
+						if(distance < particles[i].radius+particles[u].radius)
+						{
+							tmp = new CollisionGenerator(particles[i], particles[u], 
+													   distance, cNorm, parseFloat(document.getElementById("restitutionID").value));
+							tmp.resolve(elapsed);
+							delete tmp;
+						}
 					}
 				}
-			}
-			
-			//This is removing the collisions between the same particles
-			//It adds it twice with my for loops
-			for(var w in contacts)
-			{
-				for(var x in contacts)
-				{
-					if(contacts[w].particle1 == contacts[x].particle2)
-					{
-						contacts.splice(x,1);
-						cNum--;
-					}
-				}
-			}
-			
-			//If we generated any contacts lets send them to the resolver
-			if(cNum > 0)
-			{
-				tmp = new CollisionResolver(1, contacts, cNum, elapsed);
-				tmp.resolveCollisions();
-				delete tmp;
 			}
 			
 			for(var t in particles)
@@ -449,14 +445,17 @@
         var canvas = document.getElementById("webgl_physics");
         initGL(canvas);
         
-		for(var k=0; k < 10; k++)
-		{
-			t = Math.random()*0.25+0.25;
-			particles.push(new Particle(.25,5,0.8));
-			particles[k].pos[0] = k-3;
-			particles[k].pos[1] = k;
-			particles[k].pos[2] = -10;
-		}
+		t = Math.random()*0.25+0.25;
+		particles.push(new Particle(.25,5,0.8));
+		particles[0].pos[0] = 0;
+		particles[0].pos[1] = -3;
+		particles[0].pos[2] = -10;
+		particles.push(new Particle(.25,5,0.8));
+		particles[1].pos[0] = 0;
+		particles[1].pos[1] = 3;
+		particles[1].pos[2] = -10;
+		
+		rods.push(new Rod(particles[0], particles[1], 6.0));
 		
 		/*
 		particles.push(new Particle(.5,10,0.8));
@@ -516,6 +515,7 @@
 	<br/>
 
     <input type="checkbox" id="lighting" checked /> Use lighting<br/>
+    <input type="checkbox" id="collisions" checked /> Use collisions<br/>
     <br/>
 
     <h2>Directional light:</h2>

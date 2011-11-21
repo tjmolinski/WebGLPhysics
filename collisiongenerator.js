@@ -1,35 +1,23 @@
 ////////////////////////////////////////////////////////////
 //The collision handler
 ////////////////////////////////////////////////////////////
-function CollisionHandler(p1, p2, rest_t)
+function CollisionGenerator(p1, p2, dist, collisionNormal, rest_t)
 {
 	this.particle1 = p1;
 	this.particle2 = p2;
 	this.restitution = rest_t;
-	this.cNormal = [this.particle1.pos[0] - this.particle2.pos[0],
-				    this.particle1.pos[1] - this.particle2.pos[1],
-					this.particle1.pos[2] - this.particle2.pos[2]];
-					
-	tmp = Math.sqrt(this.cNormal[0]*this.cNormal[0]+this.cNormal[1]*this.cNormal[1]+this.cNormal[2]*this.cNormal[2]);
-	this.cNormal[0] /= tmp;
-	this.cNormal[1] /= tmp;
-	this.cNormal[2] /= tmp;
-	
-	this.distX = this.particle1.pos[0] - this.particle2.pos[0];
-	this.distY = this.particle1.pos[1] - this.particle2.pos[1];
-	this.distZ = this.particle1.pos[2] - this.particle2.pos[2];
-	this.distance = Math.sqrt(this.distX*this.distX+this.distY*this.distY+this.distZ*this.distZ);
-	
+	this.cNormal = collisionNormal;
+	this.distance = dist;
 	this.penetration = this.particle1.radius+this.particle2.radius-this.distance;
 }
 
-CollisionHandler.prototype.resolve = function(elapsed)
+CollisionGenerator.prototype.resolve = function(elapsed)
 {    	
 	this.resolveVelocity(elapsed);
 	this.resolveInterpenetration();
 }
 	
-CollisionHandler.prototype.resolveInterpenetration = function()
+CollisionGenerator.prototype.resolveInterpenetration = function()
 {    	
 	if(this.penetration <= 0)
 		return;
@@ -59,7 +47,7 @@ CollisionHandler.prototype.resolveInterpenetration = function()
 	this.particle2.pos[2] -= moveP2[2];
 }
 
-CollisionHandler.prototype.getSeparatingVelocity = function()
+CollisionGenerator.prototype.getSeparatingVelocity = function()
 {    	
 	sepVel = [this.particle1.vel[0], this.particle1.vel[1], this.particle1.vel[2]];
 
@@ -74,7 +62,7 @@ CollisionHandler.prototype.getSeparatingVelocity = function()
 	return sepVel[0] + sepVel[1] + sepVel[2];
 }
 
-CollisionHandler.prototype.resolveVelocity = function(elapsed)
+CollisionGenerator.prototype.resolveVelocity = function(elapsed)
 {    			
 	separatingVelocity = this.getSeparatingVelocity();
 
@@ -118,6 +106,5 @@ CollisionHandler.prototype.resolveVelocity = function(elapsed)
 	this.particle2.vel[0] += impulsePerIMass[0] * -1.0/this.particle2.mass;
 	this.particle2.vel[1] += impulsePerIMass[1] * -1.0/this.particle2.mass;
 	this.particle2.vel[2] += impulsePerIMass[2] * -1.0/this.particle2.mass;
-
 }
 ////////////////////////////////////////////////////////////
