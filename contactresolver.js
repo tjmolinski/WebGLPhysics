@@ -32,7 +32,6 @@ CollisionResolver.prototype.resolveCollisions = function()
 			break;
 			
 		this.list[maxIndex].resolve(this.time);
-		this.list.splice(maxIndex,1);
 		
 		this.iterationUsed++;
 	}
