@@ -65,11 +65,10 @@ Particle.prototype.animate = function(elapsed)
 		
 	this.forceAccum = [0.0, 0.0, 0.0];
 	
-	//The bounding box of the particles movement	
 	if(this.pos[1] < -3.5)
 	{
 		this.pos[1] = -3.5;
-		this.vel[1] = 0;//-this.vel[1];
+		this.vel[1] = -this.vel[1];
 	}
 }
 

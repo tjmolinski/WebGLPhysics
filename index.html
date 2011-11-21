@@ -10,8 +10,8 @@
 <script type="text/javascript" src="spring.js"></script>
 <script type="text/javascript" src="stiffspring.js"></script>
 <script type="text/javascript" src="bungee.js"></script>
-<script type="text/javascript" src="collisionhandler.js"></script>
-<script type="text/javascript" src="contactresolver.js"></script>
+<script type="text/javascript" src="collisiongenerator.js"></script>
+<script type="text/javascript" src="collisionresolver.js"></script>
 
 <script id="shader-fs" type="x-shader/x-fragment">
     #ifdef GL_ES
@@ -68,7 +68,7 @@
 ////////////////////////////////////////////////////////////
 //Global Variables
 ////////////////////////////////////////////////////////////
-	var effectiveFPMS = 6/10000;	//Frames per millisecond
+	var effectiveFPMS = 60/100000;	//Frames per millisecond
 	var lastTime = 0;				//Time of the last frame
 	var KICKFORCE = 50;				//The amount of force applied to kicking particles
 	var stiffies = Array();			//The list of stiff springs
@@ -82,8 +82,8 @@
     var mvMatrixStack = [];			//Model View Matrix Stack
     var pMatrix = mat4.create();	//Projection Matrix
 	var currentlyPressedKeys = {};	//A buffer of key presses
-
-	var collisions = Array();
+	
+	var contacts = Array();
 ////////////////////////////////////////////////////////////
 
     function initGL(canvas) {
@@ -187,7 +187,7 @@
 
         particleTexture.image.src = "particle.gif";
     }
-
+	
     function mvPushMatrix() {
         var copy = mat4.create();
         mat4.set(mvMatrix, copy);
@@ -222,22 +222,26 @@
     function handleKeys() {
         if (currentlyPressedKeys[37]) {
             // Left cursor key
-			particles[1].kick(KICKFORCE*effectiveFPMS, "left");
+			particles[0].kick(KICKFORCE*effectiveFPMS, "right");
+			particles[particles.length-1].kick(KICKFORCE*effectiveFPMS, "left");
 		}
         if (currentlyPressedKeys[39]) {
             // Right cursor key
-			particles[1].kick(KICKFORCE*effectiveFPMS, "right");
+			particles[0].kick(KICKFORCE*effectiveFPMS, "left");
+			particles[particles.length-1].kick(KICKFORCE*effectiveFPMS, "right");
         }
         if (currentlyPressedKeys[38]) {
             // Up cursor key
-			particles[1].kick(KICKFORCE*effectiveFPMS, "up");
+			particles[0].kick(KICKFORCE*effectiveFPMS, "down");
+			particles[particles.length-1].kick(KICKFORCE*effectiveFPMS, "up");
         }
         if (currentlyPressedKeys[40]) {
             // Down cursor key
-			particles[1].kick(KICKFORCE*effectiveFPMS, "down");
+			particles[0].kick(KICKFORCE*effectiveFPMS, "up");
+			particles[particles.length-1].kick(KICKFORCE*effectiveFPMS, "down");
         }
     }
-
+	
     function degToRad(degrees) {
         return degrees * Math.PI / 180;
     }
@@ -293,7 +297,7 @@
 			var vertexPositionData = [];
 			var normalData = [];
 			var textureCoordData = [];
-
+			
 			for (var latNumber=0; latNumber <= latitudeBands; latNumber++) {
 				var theta = latNumber * Math.PI / latitudeBands;
 				var sinTheta = Math.sin(theta);
@@ -361,17 +365,16 @@
 			particles[tmp].vertexIndexBuffer.numItems = indexData.length;
 		}
 	}
-
+	
 	function animate()
 	{
 		var timeNow = new Date().getTime();
-
+		
 		if(lastTime != 0)
 		{
+			var cNum = 0;
 			var elapsed = timeNow - lastTime;
 			elapsed *= effectiveFPMS;
-
-			var cNum = 0;
 			
 			for(var q in stiffies)
 			{
@@ -385,6 +388,7 @@
 			{
 				bungees[o].updateForce(elapsed);
 			}
+			
 			//This is finding all the collisions
 			for(var i=0; i < particles.length; i++)
 			{		
@@ -392,52 +396,48 @@
 				{
 					if(i == u)
 						continue;
-
+				
 					var distX = particles[i].pos[0] - particles[u].pos[0];
 					var distY = particles[i].pos[1] - particles[u].pos[1];
 					var distZ = particles[i].pos[2] - particles[u].pos[2];
 					var distance = Math.sqrt(distX*distX+distY*distY+distZ*distZ);
-					if(distance <= particles[i].radius+particles[u].radius)
+					if(distance < particles[i].radius+particles[u].radius)
 					{
-						collisions.push(new CollisionHandler(particles[i], particles[u], 0.5));
+						contacts.push(new CollisionHandler(particles[i], particles[u], parseFloat(document.getElementById("restitutionID").value)));
 						cNum++;
 					}
 				}
 			}
-
+			
 			//This is removing the collisions between the same particles
-			//It adds it twice with my for loop
-			/*for(var w in collisions)
+			//It adds it twice with my for loops
+			for(var w in contacts)
 			{
-				for(var x in collisions)
+				for(var x in contacts)
 				{
-					if(collisions[w].particle1 == collisions[x].particle2)
+					if(contacts[w].particle1 == contacts[x].particle2)
 					{
-						collisions.splice(x,1);
+						contacts.splice(x,1);
 						cNum--;
 					}
 				}
-			}*/
-
+			}
+			
+			//If we generated any contacts lets send them to the resolver
 			if(cNum > 0)
 			{
-				tmp = new CollisionResolver(100, collisions, cNum, elapsed);
+				tmp = new CollisionResolver(1, contacts, cNum, elapsed);
 				tmp.resolveCollisions();
 				delete tmp;
 			}
-
+			
 			for(var t in particles)
 				particles[t].animate(elapsed);
-				
-			for(var z in collisions)
-			{
-				tmpp = collisions.pop();
-				delete tmpp;
-			}
 		}
+		
 		lastTime = timeNow;
 	}
-
+	
     function tick() {
         requestAnimFrame(tick);
         handleKeys();
@@ -449,15 +449,15 @@
         var canvas = document.getElementById("webgl_physics");
         initGL(canvas);
         
-		for(var k=0; k < 3; k++)
+		for(var k=0; k < 10; k++)
 		{
 			t = Math.random()*0.25+0.25;
-			particles.push(new Particle(t,t/2,0.8));
-			particles[k].pos[1] = k-1;
-			particles[k].pos[0] = 0;
+			particles.push(new Particle(.25,5,0.8));
+			particles[k].pos[0] = k-3;
+			particles[k].pos[1] = k;
 			particles[k].pos[2] = -10;
 		}
-
+		
 		/*
 		particles.push(new Particle(.5,10,0.8));
 		particles[0].pos[0] = 0;
@@ -494,10 +494,10 @@
         initShaders();
         initTexture();
 		initBuffers();
-
+		
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.enable(gl.DEPTH_TEST);
-
+		
         document.onkeydown = handleKeyDown;
         document.onkeyup = handleKeyUp;
 
@@ -542,6 +542,14 @@
             <td>R: <input type="text" id="ambientR" value="0.2" />
             <td>G: <input type="text" id="ambientG" value="0.2" />
             <td>B: <input type="text" id="ambientB" value="0.2" />
+        </tr>
+    </table>
+    <br/>
+	
+	<h2>Restitution between particles:</h2>
+    <table style="border: 0; padding: 0;">
+        <tr>
+            <td>Restitution: <input type="text" id="restitutionID" value="0.2" />
         </tr>
     </table>
     <br/>
