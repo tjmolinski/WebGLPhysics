@@ -22,23 +22,11 @@ function Particle(radius_t, mass_t, damp_t)
 	this.isSelected = 0;
 }
 
-Particle.prototype.kick = function(a,b)
+Particle.prototype.kick = function(x,y,z)
 {
-	switch(b)
-	{
-	case "up":
-		this.forceAccum[1] += a;
-		break;
-	case "down":
-		this.forceAccum[1] -= a;
-		break;
-	case "left":
-		this.forceAccum[0] -= a;
-		break;
-	case "right":
-		this.forceAccum[0] += a;
-		break;
-	}
+	this.forceAccum[0] += x;
+	this.forceAccum[1] += y;
+	this.forceAccum[2] += z;
 }
 
 Particle.prototype.animate = function(elapsed)
