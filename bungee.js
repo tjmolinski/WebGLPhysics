@@ -15,6 +15,9 @@ Bungee.prototype.updateForce = function(elapsed)
 	var forceX, forceY, forceZ;
 	var magnitude;
 	
+	if(this.particle1.mass <= 0.0)
+		return;
+	
 	//Calculating the vector of the bungee/////////////////////
 	forceX = (this.particle1.pos[0] - this.particle2.pos[0]);
 	forceY = (this.particle1.pos[1] - this.particle2.pos[1]);

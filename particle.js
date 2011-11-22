@@ -24,6 +24,9 @@ function Particle(radius_t, mass_t, damp_t)
 
 Particle.prototype.kick = function(x,y,z)
 {
+	if(this.mass <= 0.0)
+		return;
+		
 	this.forceAccum[0] += x;
 	this.forceAccum[1] += y;
 	this.forceAccum[2] += z;
@@ -55,11 +58,11 @@ Particle.prototype.animate = function(elapsed)
 		
 	this.forceAccum = [0.0, 0.0, 0.0];
 	
-	if(this.pos[1] < -3.5)
+	/*if(this.pos[1] < -3.5)
 	{
 		this.pos[1] = -3.5;
 		this.vel[1] = -this.vel[1];
-	}
+	}*/
 }
 
 Particle.prototype.draw = function()

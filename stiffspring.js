@@ -3,8 +3,16 @@
 ////////////////////////////////////////////////////////////
 function StiffSpring(p1, a1, dp, sc)
 {
-	this.particle = p1;
-	this.anchor = a1;
+	if(p1.mass <= 0.0)
+	{
+		this.anchor = p1;
+		this.particle = a1;
+	}
+	else
+	{
+		this.anchor = a1;
+		this.particle = p1;
+	}
 	
 	this.damping = dp;
 	this.springConst = sc;

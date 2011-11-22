@@ -13,7 +13,7 @@
 <script type="text/javascript" src="cable.js"></script>
 <script type="text/javascript" src="rod.js"></script>
 <script type="text/javascript" src="collisiongenerator.js"></script>
-<script type="text/javascript" src="GLU.js"></script>
+<script type="text/javascript" src="plane.js"></script>
 
 <script id="shader-fs" type="x-shader/x-fragment">
     #ifdef GL_ES
@@ -70,27 +70,43 @@
 ////////////////////////////////////////////////////////////
 //Global Variables
 ////////////////////////////////////////////////////////////
-	var effectiveFPMS = 60/100000;	//Frames per millisecond
+	var effectiveFPMS = 60/100000;		//Frames per millisecond
 	var depthPlacement = 10;			//This is how far we send particles back on mouse click
-	var lastTime = 0;				//Time of the last frame
-	var stiffies = Array();			//The list of stiff springs
-	var cables = Array();
-	var rods = Array();
-	var bungees = Array();			//The list of bungees
-	var springs = Array();			//The list of springs
-	var particles = Array();		//The list of particles
-	var contacts = Array();			//The list of collisions
-	var selectedParticles = Array(); //The list of selected particles
-    var particleTexture = Array();			//A texture used for the particles
-    var gl;							//The gl program
-    var shaderProgram;				//The shader program
+	var lastTime = 0;					//Time of the last frame
+	var planes = Array();				//The list of planes
+	var stiffies = Array();				//The list of stiff springs
+	var cables = Array();				//The list of cables
+	var rods = Array();					//The list of rods
+	var bungees = Array();				//The list of bungees
+	var springs = Array();				//The list of springs
+	var particles = Array();			//The list of particles
+	var contacts = Array();				//The list of collisions
+	var selectedParticles = Array();	//The list of selected particles
+    var particleTexture = Array();		//A texture used for the particles
+    var gl;								//The gl program
+    var shaderProgram;					//The shader program
+    var mvMatrix = mat4.create();		//Model View Matrix
+    var mvMatrixStack = [];				//Model View Matrix Stack
+    var pMatrix = mat4.create();		//Projection Matrix
+	var pMatrixInverse = mat4.create();	//Projection Inverse Matrix
+	var currentlyPressedKeys = {};		//A buffer of key presses
+////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////
+//User controlled variables
+////////////////////////////////////////////////////////////
+	var lighting;
+	var createParticle;
 	var restitution;
-    var mvMatrix = mat4.create();	//Model View Matrix
-    var mvMatrixStack = [];			//Model View Matrix Stack
-    var pMatrix = mat4.create();	//Projection Matrix
-	var pMatrixInverse = mat4.create();
-	var eye = vec3.create([0,0,0]) ;  // negation of actual eye 
-	var currentlyPressedKeys = {};	//A buffer of key presses
+	var collision;
+	var spring;
+	var rod;
+	var cable;
+	var stiffspring;
+	var bungee;
+	var springConst;
+	var particleRadius;
+	var particleMass;
 ////////////////////////////////////////////////////////////
 
     function initGL(canvas) {
@@ -233,66 +249,45 @@
         gl.uniformMatrix3fv(shaderProgram.nMatrixUniform, false, normalMatrix);
     }
 
-	var lighting;
-	var createParticle;
-	var collision;
-	var spring;
-	var rod;
-	var cable;
-	var stiffspring;
-	var bungee;
-	var springConst;
-
     function handleMouseDown(event) 
 	{
-	  var world1 = [0,0,0,0] ;
-      var world2 = [0,0,0,0] ;
-      var dir = [0,0,0] ;
-      var w = gl.viewportWidth ;
-      var h = gl.viewportHeight ;
-	  //Why does this work? figure out why!!!!
-	  ///This works for 500x500 resolution//////
-      //var x = (event.clientX-w/1.92)/(w/2);
-      //var y = -(event.clientY-h/1.35)/(h/2);
-	  //////////////////////////////////////////
-	  //This works for 600x600 resolution///////
-      var x = (event.clientX-w/1.92)/(w/2) ;
-      var y = -(event.clientY-h/1.42)/(h/2) ;
-	  //////////////////////////////////////////
-      mat4.inverse(pMatrix, pMatrixInverse) ;
-      // convert clip space coordinates into world space
-      mat4.multiplyVec4(pMatrixInverse, [x,y,1,1], world1) ;
-      vec3.scale(world1,1/world1[3]) ;
-      mat4.multiplyVec4(pMatrixInverse, [x,y,depthPlacement,1], world2) ;
-      vec3.scale(world2,1/world2[3]) ;
-      // calculate world space view vector
-      vec3.subtract(world2,world1,dir) ;
-      vec3.normalize(dir) ;
-      //vec3.scale(dir,0.3) ;
-      // move eye in direction of world space view vector
-      /*vec3.subtract(eye,dir) ;
-      drawScene();
-      console.log(event)*/
+		var world1 = [0,0,0,0] ;
+		var world2 = [0,0,0,0] ;
+		var dir = [0,0,0] ;
+		var w = gl.viewportWidth ;
+		var h = gl.viewportHeight ;
+		//Why does this work? figure out why!!!!
+		///This works for 500x500 resolution//////
+		var x = (event.clientX-w/1.92)/(w/2);
+		var y = -(event.clientY-h/1.35)/(h/2);
+		//////////////////////////////////////////
+		//This works for 600x600 resolution///////
+		//var x = (event.clientX-w/1.92)/(w/2) ;
+		//var y = -(event.clientY-h/1.42)/(h/2) ;
+		//////////////////////////////////////////
+		mat4.inverse(pMatrix, pMatrixInverse) ;
+		// convert clip space coordinates into world space
+		mat4.multiplyVec4(pMatrixInverse, [x,y,1,1], world1) ;
+		vec3.scale(world1,1/world1[3]) ;
+		mat4.multiplyVec4(pMatrixInverse, [x,y,depthPlacement,1], world2) ;
+		vec3.scale(world2,1/world2[3]) ;
+		// calculate world space view vector
+		vec3.subtract(world2,world1,dir) ;
+		vec3.normalize(dir);
+
 		if(createParticle)
 		{
 			lastMouseX = event.clientX;
 			lastMouseY = event.clientY;
 
-			var r = Math.random()*0.25+0.35;
-			var m = Math.floor(Math.random()*10 + 5);
-			//tmp = get3dPoint(lastMouseX,lastMouseY, gl.viewportWidth, gl.viewportHeight);
-			particles.push(new Particle(r,m,0.8));
-			particles[particles.length-1].pos[0] = -dir[0]*depthPlacement;//*depthPlacement-r/2;// - r/2;
-			particles[particles.length-1].pos[1] = -dir[1]*depthPlacement;//*depthPlacement+r*2;// - r/2;
-			particles[particles.length-1].pos[2] = -dir[2]*depthPlacement;//*depthPlacement+r;
+			particles.push(new Particle(particleRadius,particleMass,0.8));
+			particles[particles.length-1].pos[0] = -dir[0]*depthPlacement;
+			particles[particles.length-1].pos[1] = -dir[1]*depthPlacement;
+			particles[particles.length-1].pos[2] = -dir[2]*depthPlacement;
 			initBuffers();
 		}
 		else
 		{
-		
-			lastMouseX = event.clientX;
-			lastMouseY = event.clientY;
-			
 			var xv;
 			var yv;
 			var zv;
@@ -321,7 +316,6 @@
 					zz /= dist;
 					
 					dot = xv*xx + yv*yy + zv*zz;
-					console.log(dot);
 					
 					if(dot < -.999)
 					{
@@ -361,8 +355,10 @@
         currentlyPressedKeys[event.keyCode] = false;
     }
 
-    function handleKeys() {
-        if (currentlyPressedKeys[32]) {
+    function handleKeys() 
+	{
+        if (currentlyPressedKeys[32]) 
+		{
             // Pressed space bar
 			x = parseFloat(document.getElementById("kickX").value);
 			y = parseFloat(document.getElementById("kickY").value);
@@ -374,7 +370,8 @@
 		}
     }
 
-    function degToRad(degrees) {
+    function degToRad(degrees) 
+	{
         return degrees * Math.PI / 180;
     }
 
@@ -590,6 +587,7 @@
 			{
 				for(var t in particles)
 				{
+					planes[0].checkForHits(elapsed, particles[t]);
 					particles[t].animate(elapsed);
 				}	
 			}
@@ -606,6 +604,13 @@
 		else if(depthPlacement < 1.0)
 			document.getElementById("depthID").value = 1.0;
 			
+		particleMass = parseFloat(document.getElementById("massID").value);
+		if(particleMass < 0.0)
+			document.getElementById("massID").value = 0.0;
+		
+		particleRadius = parseFloat(document.getElementById("radiusID").value);
+		if(particleRadius < 0.0)
+			document.getElementById("radiusID").value = 0.0;
 		
 		lighting = document.getElementById("lighting").checked;
 		createParticle = document.getElementById("createParticle").checked;
@@ -643,6 +648,7 @@
 
 		if(spring)
 		{
+			document.getElementById("spring").checked=false;
 			document.getElementById("rod").checked=false;
 			document.getElementById("cable").checked=false;
 			document.getElementById("stiffspring").checked=false;
@@ -651,6 +657,7 @@
 		if(rod)
 		{
 			document.getElementById("spring").checked=false;
+			document.getElementById("rod").checked=false;
 			document.getElementById("cable").checked=false;
 			document.getElementById("stiffspring").checked=false;
 			document.getElementById("bungee").checked=false;
@@ -660,6 +667,7 @@
 		{
 			document.getElementById("spring").checked=false;
 			document.getElementById("rod").checked=false;
+			document.getElementById("cable").checked=false;
 			document.getElementById("stiffspring").checked=false;
 			document.getElementById("bungee").checked=false;
 		}
@@ -668,6 +676,7 @@
 			document.getElementById("spring").checked=false;
 			document.getElementById("rod").checked=false;
 			document.getElementById("cable").checked=false;
+			document.getElementById("stiffspring").checked=false;
 			document.getElementById("bungee").checked=false;
 		}
 		if(bungee)
@@ -676,6 +685,7 @@
 			document.getElementById("rod").checked=false;
 			document.getElementById("cable").checked=false;
 			document.getElementById("stiffspring").checked=false;
+			document.getElementById("bungee").checked=false;
 		}
 
         gl.uniform1i(shaderProgram.useLightingUniform, lighting);
@@ -721,6 +731,10 @@
         initTexture();
 		initBuffers();
 
+		pos = [0.0, -2.0, 0.0];
+		nor = [0.0, 1.0, 0.0];
+		planes.push(new Plane(pos, nor, 0.8));
+		
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.enable(gl.DEPTH_TEST);
 
@@ -740,13 +754,12 @@
 
 <table width="900">
 	<tr><td align="center"><h3>Ted Molinski &mdash; WebGL Physics &mdash; Brian Mushika</h3></td></tr>
-    <tr><td width="600"><canvas id="webgl_physics" style="border: none;" width="600" height="600"></canvas></td>
+    <tr><td width="500"><canvas id="webgl_physics" style="border: none;" width="500" height="500"></canvas></td>
     <td width="50"></td>
     <td><table><tr><td><table style="border: 0; padding: 0;">
             <tr><td align="center"><b>Options</b></td>
             <tr><td><input type="checkbox" id="lighting" checked /> Use lighting</td></tr>
-            <tr><td><input type="checkbox" id="createParticle" checked /> 
-            Create a Particle on mouse click.</td></tr>
+            <tr><td><input type="checkbox" id="createParticle" checked /> Create particle.</td></tr>
             <tr><td><input type="checkbox" id="collision" checked /> Use collision</td></tr>
             <tr><td><input type="checkbox" id="updateParticles" checked /> Update Scene</td></tr>
             <tr><td><hr></td></tr>
@@ -757,10 +770,12 @@
             <tr><td><input type="checkbox" id="bungee" checked /> Use Bungee</td></tr>
     </table></td></tr>
     
-	<tr><td align="center"><b>Depth of placement</b></td></tr>
+	<tr><td align="center"><b>Particle Properties</b></td></tr>
     <tr><td><table style="border: 0; padding: 0;">
         <tr>
             <tr><td><b>Depth:</b></td><td><input type="text" id="depthID" value="-10.0" size="4"/></td>
+			<td><b>Mass:</b></td><td><input type="text" id="massID" value="10.0" size="4"/></td>
+			<td><b>Radius:</b></td><td><input type="text" id="radiusID" value="0.25" size="4"/></td>
         </tr>
     </table></td></tr>
 	
