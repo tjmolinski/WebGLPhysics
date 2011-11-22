@@ -70,6 +70,7 @@
 //Global Variables
 ////////////////////////////////////////////////////////////
 	var effectiveFPMS = 60/100000;	//Frames per millisecond
+	var touchDistance = 10;			//This is how far we send particles back on mouse click
 	var lastTime = 0;				//Time of the last frame
 	var KICKFORCE = 50;				//The amount of force applied to kicking particles
 	var stiffies = Array();			//The list of stiff springs
@@ -212,6 +213,55 @@
         mat3.transpose(normalMatrix);
         gl.uniformMatrix3fv(shaderProgram.nMatrixUniform, false, normalMatrix);
     }
+	
+	var lighting;
+	var createParticle;
+	var collision;
+	var spring;
+	var rod;
+	var cable;
+	var stiffspring;
+	var bungee;
+	
+	function get3dPoint(mx, my, width, height, viewMatrix, projectionMatrix) 
+	{
+        x = 2.0 * mx / 500 - 1;
+        y = - 2.0 * my / 500 + 1;
+		
+		tmp = mat4.create();
+		tmp2 = mat4.create();
+		viewProjectionInverse = mat4.create();
+		mat4.multiply(viewMatrix, projectionMatrix, tmp2);
+		mat4.inverse(projectionMatrix, viewProjectionInverse);
+		ts = vec3.create();
+		ts[0] = x;
+		ts[1] = y;
+		ts[2] = 1;
+
+        mat4.multiplyVec3(viewProjectionInverse, ts, tmp);
+		return tmp;
+	}
+	
+    function handleMouseDown(event) 
+	{
+		if(createParticle)
+		{
+			lastMouseX = event.clientX;
+			lastMouseY = event.clientY;
+			
+			var r = Math.random()*0.25+0.25;
+			var m = Math.floor(Math.random()*9998);
+			tmp = mat4.create();
+			tmp = get3dPoint(lastMouseX,lastMouseY, 500, 500, mvMatrix, pMatrix);
+			particles.push(new Particle(r,m,0.8));
+			particles[particles.length-1].pos[0] = tmp[0]*touchDistance - r/2;
+			particles[particles.length-1].pos[1] = tmp[1]*touchDistance + r/2;
+			particles[particles.length-1].pos[2] = tmp[2]*touchDistance;
+			initBuffers();
+		}
+		
+    }
+    
 
     function handleKeyDown(event) {
         currentlyPressedKeys[event.keyCode] = true;
@@ -253,8 +303,79 @@
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
-
-        var lighting = document.getElementById("lighting").checked;
+		lighting = document.getElementById("lighting").checked;
+		createParticle = document.getElementById("createParticle").checked;
+		collision = document.getElementById("collision").checked;
+		spring = document.getElementById("spring").checked;
+		rod = document.getElementById("rod").checked;
+		cable = document.getElementById("cable").checked;
+		stiffspring = document.getElementById("stiffspring").checked;
+		bungee = document.getElementById("bungee").checked;
+        
+		
+		if(createParticle)
+		{
+			
+			document.getElementById("spring").disabled=true;
+			document.getElementById("rod").disabled=true;
+			document.getElementById("cable").disabled=true;
+			document.getElementById("stiffspring").disabled=true;
+			document.getElementById("bungee").disabled=true;
+			
+			document.getElementById("spring").checked=false;
+			document.getElementById("rod").checked=false;
+			document.getElementById("cable").checked=false;
+			document.getElementById("stiffspring").checked=false;
+			document.getElementById("bungee").checked=false;
+		}
+		else 
+		{
+			document.getElementById("spring").disabled=false;
+			document.getElementById("rod").disabled=false;
+			document.getElementById("cable").disabled=false;
+			document.getElementById("stiffspring").disabled=false;
+			document.getElementById("bungee").disabled=false;
+		}
+		
+		if(spring)
+		{
+			document.getElementById("rod").checked=false;
+			document.getElementById("cable").checked=false;
+			document.getElementById("stiffspring").checked=false;
+			document.getElementById("bungee").checked=false;
+		}
+		if(rod)
+		{
+			document.getElementById("spring").checked=false;
+			document.getElementById("cable").checked=false;
+			document.getElementById("stiffspring").checked=false;
+			document.getElementById("bungee").checked=false;
+		}
+		
+		if(cable)
+		{
+			
+			
+			document.getElementById("spring").checked=false;
+			document.getElementById("rod").checked=false;
+			document.getElementById("stiffspring").checked=false;
+			document.getElementById("bungee").checked=false;
+		}
+		if(stiffspring)
+		{
+			document.getElementById("spring").checked=false;
+			document.getElementById("rod").checked=false;
+			document.getElementById("cable").checked=false;
+			document.getElementById("bungee").checked=false;
+		}
+		if(bungee)
+		{
+			document.getElementById("spring").checked=false;
+			document.getElementById("rod").checked=false;
+			document.getElementById("cable").checked=false;
+			document.getElementById("stiffspring").checked=false;
+		}
+		
         gl.uniform1i(shaderProgram.useLightingUniform, lighting);
         if (lighting) {
             gl.uniform3f(
@@ -398,7 +519,7 @@
 				bungees[o].updateForce(elapsed);
 			}
 			
-			if (document.getElementById("collisions").checked) 
+			if (document.getElementById("collision").checked) 
 			{
 				//This is finding all the collisions
 				//then it handles the collisions that happen first
@@ -431,6 +552,16 @@
 		}
 		
 		lastTime = timeNow;
+		
+		if( mouseDown == true)
+		{
+			creationTimer -= 1;
+			if(creationTimer <= 0)
+			{
+				mouseDown = false;
+				creationTimer = 50;
+			}
+		}
 	}
 	
     function tick() {
@@ -445,7 +576,7 @@
         initGL(canvas);
         
 		t = Math.random()*0.25+0.25;
-		particles.push(new Particle(.25,5,0.8));
+		/*particles.push(new Particle(.25,5,0.8));
 		particles[0].pos[0] = 0;
 		particles[0].pos[1] = -3;
 		particles[0].pos[2] = -10;
@@ -454,7 +585,7 @@
 		particles[1].pos[1] = 3;
 		particles[1].pos[2] = -10;
 		
-		rods.push(new Rod(particles[0], particles[1], 6.0));
+		rods.push(new Rod(particles[0], particles[1], 6.0));*/
 		//cables.push(new Cable(particles[0], particles[1], 6.0, 0.0));
 		
 		/*
@@ -499,6 +630,8 @@
 		
         document.onkeydown = handleKeyDown;
         document.onkeyup = handleKeyUp;
+		canvas.onmousedown = handleMouseDown;
+        //canvas.onmouseup = handleMouseUp;
 
         tick();
     }
@@ -507,57 +640,58 @@
 
 
 </head>
+<body onLoad="webGLStart();">
 
-
-<body onload="webGLStart();">
-    <canvas id="webgl_physics" style="border: none;" width="500" height="500"></canvas>
+<table width="900">
+	<tr><td align="center"><h3>Ted Molinski &mdash; WebGL Physics &mdash; Brian Mushika</h3></td></tr>
+    <tr><td width="500"><canvas id="webgl_physics" style="border: none;" width="500" height="500"></canvas></td>
+    <td width="50"></td>
+    <td><table><tr><td><table style="border: 0; padding: 0;">
+            <tr><td align="center"><b>Options</b></td>
+            <tr><td><input type="checkbox" id="lighting" checked /> Use lighting</td></tr>
+            <tr><td><input type="checkbox" id="createParticle" checked /> 
+            Create a Particle with a right mouse click.</td></tr>
+            <tr><td><input type="checkbox" id="collision" checked /> Use collision</td></tr>
+            <tr><td><hr></td></tr>
+            <tr><td><input type="checkbox" id="spring" checked /> Use Spring</td></tr>
+            <tr><td><input type="checkbox" id="rod" checked /> Use Rod</td></tr>
+            <tr><td><input type="checkbox" id="cable" checked /> Use Cable</td></tr>
+            <tr><td><input type="checkbox" id="stiffspring" checked /> Use Stiff Spring</td></tr>
+            <tr><td><input type="checkbox" id="bungee" checked /> Use Bungee</td></tr>
+    </table></td></tr>
     
-	<br/>
-
-    <input type="checkbox" id="lighting" checked /> Use lighting<br/>
-    <input type="checkbox" id="collisions" checked /> Use collisions<br/>
-    <br/>
-
-    <h2>Directional light:</h2>
-    <table style="border: 0; padding: 0;">
-        <tr>
-            <td><b>Direction:</b>
-            <td>X: <input type="text" id="lightDirectionX" value="-1.0" />
-            <td>Y: <input type="text" id="lightDirectionY" value="-1.0" />
-            <td>Z: <input type="text" id="lightDirectionZ" value="-1.0" />
-        </tr>
-        <tr>
-            <td><b>Colour:</b>
-            <td>R: <input type="text" id="directionalR" value="0.8" />
-            <td>G: <input type="text" id="directionalG" value="0.8" />
-            <td>B: <input type="text" id="directionalB" value="0.8" />
-        </tr>
-    </table>
-
-
-    <h2>Ambient light:</h2>
-    <table style="border: 0; padding: 0;">
-        <tr>
-            <td><b>Colour:</b>
-            <td>R: <input type="text" id="ambientR" value="0.2" />
-            <td>G: <input type="text" id="ambientG" value="0.2" />
-            <td>B: <input type="text" id="ambientB" value="0.2" />
-        </tr>
-    </table>
-    <br/>
-	
-	<h2>Restitution between particles:</h2>
-    <table style="border: 0; padding: 0;">
-        <tr>
-            <td>Restitution: <input type="text" id="restitutionID" value="0.2" />
-        </tr>
-    </table>
-    <br/>
-
-    This was done with the help of "<a href="http://learningwebgl.com/blog/">Learning WebGL</a>" tutorials.
+     <tr><td align="center"><b>Ambient light</b></td></tr>
+    <tr><td><table style="border: 0; padding: 0;">
+ 
+           <tr><td><b>Colour:</b></td>
+           <td align="right">R: <input type="text" id="ambientR" value="0.2" size="4"/></td>
+           <td>G: <input type="text" id="ambientG" value="0.2" size="4"/></td>
+           <td>B: <input type="text" id="ambientB" value="0.2" size="4"/></td></tr>
+ 
+    </table></td></tr>
     
-    <br/>
-    <br/>
+    <tr><td align="center"><b>Directional light</b></td></tr>
+    <tr><td><table style="border: 0; padding: 0;">
+    
+            <tr><td><b>Direction:</b></td>
+            <td>X: <input type="text" id="lightDirectionX" value="-1.0" size="4"/></td>
+            <td>Y: <input type="text" id="lightDirectionY" value="-1.0"  size="4"/></td>
+            <td>Z: <input type="text" id="lightDirectionZ" value="-1.0"  size="4"/></td></tr>
+            <tr><td><b>Colour:</b></td>
+            <td>R: <input type="text" id="directionalR" value="0.8" size="4"/></td>
+            <td>G: <input type="text" id="directionalG" value="0.8" size="4"/></td>
+            <td>B: <input type="text" id="directionalB" value="0.8" size="4"/></td></tr>
+    </table></td></tr>
+    
+	<tr><td align="center"><b>Restitution between particles</b></td></tr>
+    <tr><td><table style="border: 0; padding: 0;">
+        <tr>
+            <tr><td><b>Restitution:</b></td><td><input type="text" id="restitutionID" value="0.2" size="4"/></td>
+        </tr>
+    </table></td></tr>
+  
+  </table></td></tr>
+  <tr><td> This was done with the help of "<a href="http://learningwebgl.com/blog/">Learning WebGL</a>" tutorials.</td></tr></table>
 </body>
 
 </html>
