@@ -80,9 +80,11 @@
 	var springs = Array();			//The list of springs
 	var particles = Array();		//The list of particles
 	var contacts = Array();			//The list of collisions
-    var particleTexture;			//A texture used for the particles
+	var selectedParticles = Array(); //The list of selected particles
+    var particleTexture = Array();			//A texture used for the particles
     var gl;							//The gl program
     var shaderProgram;				//The shader program
+	var restitution;
     var mvMatrix = mat4.create();	//Model View Matrix
     var mvMatrixStack = [];			//Model View Matrix Stack
     var pMatrix = mat4.create();	//Projection Matrix
@@ -170,7 +172,7 @@
         shaderProgram.directionalColorUniform = gl.getUniformLocation(shaderProgram, "uDirectionalColor");
     }
 
-    function handleLoadedTexture(texture) {
+    /*function handleLoadedTexture(texture) {
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
@@ -179,9 +181,25 @@
         gl.generateMipmap(gl.TEXTURE_2D);
 
         gl.bindTexture(gl.TEXTURE_2D, null);
+    }*/
+	
+	function handleLoadedTexture(textures) {
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+
+        gl.bindTexture(gl.TEXTURE_2D, textures[0]);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textures[0].image);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+
+        gl.bindTexture(gl.TEXTURE_2D, textures[1]);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textures[1].image);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+
+        gl.bindTexture(gl.TEXTURE_2D, null);
     }
 
-    function initTexture() {
+    /*function initTexture() {
         particleTexture = gl.createTexture();
         particleTexture.image = new Image();
         particleTexture.image.onload = function () {
@@ -189,8 +207,28 @@
         }
 
         particleTexture.image.src = "particle.gif";
-    }
+    }*/
 	
+    function initTexture() {
+        var particleImage = new Image();
+		var selectedImage = new Image();
+
+        for (var i=0; i < 2; i++) {
+            var texture = gl.createTexture();
+			if(i == 0)
+				texture.image = particleImage;
+			else
+				texture.image = selectedImage;
+            particleTexture.push(texture);
+        }
+
+        particleImage.onload = function () {
+            handleLoadedTexture(particleTexture)
+        }
+        particleImage.src = "particle.gif";
+        selectedImage.src = "selected.gif";
+    }
+
     function mvPushMatrix() {
         var copy = mat4.create();
         mat4.set(mvMatrix, copy);
@@ -213,7 +251,7 @@
         mat3.transpose(normalMatrix);
         gl.uniformMatrix3fv(shaderProgram.nMatrixUniform, false, normalMatrix);
     }
-	
+
 	var lighting;
 	var createParticle;
 	var collision;
@@ -222,12 +260,13 @@
 	var cable;
 	var stiffspring;
 	var bungee;
-	
+	var springConst;
+
 	function get3dPoint(mx, my, width, height, viewMatrix, projectionMatrix) 
 	{
         x = 2.0 * mx / 500 - 1;
         y = - 2.0 * my / 500 + 1;
-		
+
 		tmp = mat4.create();
 		tmp2 = mat4.create();
 		viewProjectionInverse = mat4.create();
@@ -241,33 +280,83 @@
         mat4.multiplyVec3(viewProjectionInverse, ts, tmp);
 		return tmp;
 	}
-	
+
     function handleMouseDown(event) 
 	{
 		if(createParticle)
 		{
 			lastMouseX = event.clientX;
 			lastMouseY = event.clientY;
-			
-			var r = Math.random()*0.25+0.25;
-			var m = Math.floor(Math.random()*9998);
+
+			var r = Math.random()*0.25+0.35;
+			var m = Math.floor(Math.random()*10 + 5);
 			tmp = mat4.create();
 			tmp = get3dPoint(lastMouseX,lastMouseY, 500, 500, mvMatrix, pMatrix);
 			particles.push(new Particle(r,m,0.8));
-			particles[particles.length-1].pos[0] = tmp[0]*touchDistance - r/2;
-			particles[particles.length-1].pos[1] = tmp[1]*touchDistance + r/2;
-			particles[particles.length-1].pos[2] = tmp[2]*touchDistance;
+			particles[particles.length-1].pos[0] = tmp[0]*touchDistance-r/2;// - r/2;
+			particles[particles.length-1].pos[1] = tmp[1]*touchDistance+r*2;// - r/2;
+			particles[particles.length-1].pos[2] = tmp[2]*touchDistance+r;
 			initBuffers();
 		}
+		else
+		{
 		
+			lastMouseX = event.clientX;
+			lastMouseY = event.clientY;
+			
+			var tmp2 = mat4.create();
+			tmp2 = get3dPoint(lastMouseX,lastMouseY, 500, 500, mvMatrix, pMatrix);
+			var xv;
+			var yv;
+			var zv;
+			var dist;
+			
+			if(particles.length > 0)
+			{
+				for(var i in particles)
+				{
+					found = false;
+				
+					xv = (particles[i].pos[0] - tmp2[0]*touchDistance +(particles[i].radius/2));
+					yv = (particles[i].pos[1] - tmp2[1]*touchDistance -particles[i].radius*2);
+					zv = (particles[i].pos[2] - tmp2[2]*touchDistance-particles[i].radius);
+					
+					
+					dist = Math.sqrt(xv*xv+yv*yv+zv*zv);
+					
+					
+					if(dist < particles[i].radius)
+					{
+						for(var p in selectedParticles)
+						{
+							if(selectedParticles[p]==particles[i])
+							{
+								found = true;
+								break;
+							}
+						}
+						
+						if(found)
+							break;
+						if( selectedParticles.length != 2 )
+						{	
+							particles[i].isSelected = 1;
+							selectedParticles.push(particles[i]);
+						}
+					}
+				}
+			}
+		}
     }
     
 
-    function handleKeyDown(event) {
+    function handleKeyDown(event) 
+	{
         currentlyPressedKeys[event.keyCode] = true;
     }
 
-    function handleKeyUp(event) {
+    function handleKeyUp(event) 
+	{
         currentlyPressedKeys[event.keyCode] = false;
     }
 
@@ -293,10 +382,21 @@
 			//particles[particles.length-1].kick(KICKFORCE*effectiveFPMS, "down");
         }
     }
-	
+
     function degToRad(degrees) {
         return degrees * Math.PI / 180;
     }
+
+	function magnitude(p1, p2)
+	{
+		var xv = (p1.pos[0] - p2.pos[0]);
+		var yv = (p1.pos[1] - p2.pos[1]);
+		var zv = (p1.pos[2] - p2.pos[2]);
+		
+		
+		return Math.sqrt(xv*xv+yv*yv+zv*zv);
+	}
+	
 
     function drawScene() {
         gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
@@ -311,17 +411,19 @@
 		cable = document.getElementById("cable").checked;
 		stiffspring = document.getElementById("stiffspring").checked;
 		bungee = document.getElementById("bungee").checked;
-        
+		restitution = parseFloat(document.getElementById("restitutionID").value);
+		springConst = parseFloat(document.getElementById("springConstID").value);
 		
+        
 		if(createParticle)
 		{
-			
+
 			document.getElementById("spring").disabled=true;
 			document.getElementById("rod").disabled=true;
 			document.getElementById("cable").disabled=true;
 			document.getElementById("stiffspring").disabled=true;
 			document.getElementById("bungee").disabled=true;
-			
+
 			document.getElementById("spring").checked=false;
 			document.getElementById("rod").checked=false;
 			document.getElementById("cable").checked=false;
@@ -336,7 +438,7 @@
 			document.getElementById("stiffspring").disabled=false;
 			document.getElementById("bungee").disabled=false;
 		}
-		
+
 		if(spring)
 		{
 			document.getElementById("rod").checked=false;
@@ -351,11 +453,11 @@
 			document.getElementById("stiffspring").checked=false;
 			document.getElementById("bungee").checked=false;
 		}
-		
+
 		if(cable)
 		{
-			
-			
+
+
 			document.getElementById("spring").checked=false;
 			document.getElementById("rod").checked=false;
 			document.getElementById("stiffspring").checked=false;
@@ -375,7 +477,7 @@
 			document.getElementById("cable").checked=false;
 			document.getElementById("stiffspring").checked=false;
 		}
-		
+
         gl.uniform1i(shaderProgram.useLightingUniform, lighting);
         if (lighting) {
             gl.uniform3f(
@@ -420,7 +522,7 @@
 			var vertexPositionData = [];
 			var normalData = [];
 			var textureCoordData = [];
-			
+
 			for (var latNumber=0; latNumber <= latitudeBands; latNumber++) {
 				var theta = latNumber * Math.PI / latitudeBands;
 				var sinTheta = Math.sin(theta);
@@ -488,16 +590,73 @@
 			particles[tmp].vertexIndexBuffer.numItems = indexData.length;
 		}
 	}
-	
+
 	function animate()
 	{
 		var timeNow = new Date().getTime();
-		
+
 		if(lastTime != 0)
 		{
 			var elapsed = timeNow - lastTime;
 			elapsed *= effectiveFPMS;
 			
+			
+			if(selectedParticles.length == 2)
+			{
+			
+				var dist = magnitude(selectedParticles[0], selectedParticles[1]);
+				if(rod)
+				{
+					rods.push(new Rod(selectedParticles[0], selectedParticles[1], dist));
+				
+					pp = selectedParticles.pop();
+					po = selectedParticles.pop();
+					pp.isSelected = 0;
+					po.isSelected = 0;
+				}
+				if(cable)
+				{
+					cables.push(new Cable(selectedParticles[0], selectedParticles[1], dist, 0.0));
+					
+					pp = selectedParticles.pop();
+					po = selectedParticles.pop();
+					pp.isSelected = 0;
+					po.isSelected = 0;
+				}
+				if(spring)
+				{
+					springs.push(new Spring(selectedParticles[0], selectedParticles[1], dist, springConst/effectiveFPMS));
+					springs.push(new Spring(selectedParticles[1],selectedParticles[0], dist, springConst/effectiveFPMS));
+					
+					pp = selectedParticles.pop();
+					po = selectedParticles.pop();
+					pp.isSelected = 0;
+					po.isSelected = 0;
+				}
+				if(stiffspring)
+				{
+					stiffies.push(new StiffSpring(selectedParticles[1], selectedParticles[0], dist, springConst/effectiveFPMS));
+					
+					pp = selectedParticles.pop();
+					po = selectedParticles.pop();
+					pp.isSelected = 0;
+					po.isSelected = 0;
+				}
+				if(bungee)
+				{
+					bungees.push(new Bungee(selectedParticles[1], selectedParticles[0], dist, springConst/effectiveFPMS));
+					bungees.push(new Bungee(selectedParticles[0], selectedParticles[1], dist, springConst/effectiveFPMS));
+					
+					pp = selectedParticles.pop();
+					po = selectedParticles.pop();
+					pp.isSelected = 0;
+					po.isSelected = 0;
+				}
+			}
+			/*if(selectedParticles.length > 0)
+			{
+				alert(selectedParticles.length);
+			}*/
 			for(var l in cables)
 			{
 				cables[l].updateForce(elapsed);
@@ -519,6 +678,7 @@
 				bungees[o].updateForce(elapsed);
 			}
 			
+
 			if (document.getElementById("collision").checked) 
 			{
 				//This is finding all the collisions
@@ -529,12 +689,12 @@
 					{
 						if(i == u)
 							continue;
-					
+
 						var distX = particles[i].pos[0] - particles[u].pos[0];
 						var distY = particles[i].pos[1] - particles[u].pos[1];
 						var distZ = particles[i].pos[2] - particles[u].pos[2];
 						var distance = Math.sqrt(distX*distX+distY*distY+distZ*distZ);
-						
+
 						var cNorm = [distX/distance, distY/distance, distZ/distance];
 						if(distance < particles[i].radius+particles[u].radius)
 						{
@@ -547,13 +707,18 @@
 				}
 			}
 			
-			for(var t in particles)
-				particles[t].animate(elapsed);
+			if(document.getElementById("updateParticles").checked)
+			{
+				for(var t in particles)
+				{
+					particles[t].animate(elapsed);
+				}	
+			}
 		}
-		
+
 		lastTime = timeNow;
 	}
-	
+
     function tick() {
         requestAnimFrame(tick);
         handleKeys();
@@ -564,60 +729,13 @@
     function webGLStart() {
         var canvas = document.getElementById("webgl_physics");
         initGL(canvas);
-        
-		t = Math.random()*0.25+0.25;
-		/*particles.push(new Particle(.25,5,0.8));
-		particles[0].pos[0] = 0;
-		particles[0].pos[1] = -3;
-		particles[0].pos[2] = -10;
-		particles.push(new Particle(.25,5,0.8));
-		particles[1].pos[0] = 0;
-		particles[1].pos[1] = 3;
-		particles[1].pos[2] = -10;
-		
-		rods.push(new Rod(particles[0], particles[1], 6.0));*/
-		//cables.push(new Cable(particles[0], particles[1], 6.0, 0.0));
-		
-		/*
-		particles.push(new Particle(.5,10,0.8));
-		particles[0].pos[0] = 0;
-		particles[0].pos[1] = -2;
-		particles[0].pos[2] = -10;
-		particles.push(new Particle(.5,1,0.8));
-		particles[1].pos[0] = 0;
-		particles[1].pos[1] = 2;
-		particles[1].pos[2] = -10;
-		*/
-		//stiffies.push(new StiffSpring(particles[1], particles[0], 0.8, 0.5));
-		//bungees.push(new Bungee(particles[1], particles[0], 1, 0.5));
-		/*particles.push(new Particle(.5,10,.8));
-		particles[0].pos[0] = 0;
-		particles[0].pos[1] = 0;
-		particles[0].pos[2] = -10;
-		particles.push(new Particle(.5,10,.8));
-		particles[1].pos[0] = -1;
-		particles[1].pos[1] = 1;
-		particles[1].pos[2] = -10;
-		particles.push(new Particle(.5,10,.8));
-		particles[2].pos[0] = 1;
-		particles[2].pos[1] = 1;
-		particles[2].pos[2] = -10;
-		particles.push(new Particle(.5,10,.8));
-		particles[3].pos[0] = 0;
-		particles[3].pos[1] = 1;
-		particles[3].pos[2] = -10;
-
-		springs.push(new Spring(particles[3], particles[0], 3, 1.6));
-		springs.push(new Spring(particles[2], particles[3], 2, 1.6));
-		springs.push(new Spring(particles[1], particles[3], 2, 1.6));
-		*/
         initShaders();
         initTexture();
 		initBuffers();
-		
+
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.enable(gl.DEPTH_TEST);
-		
+
         document.onkeydown = handleKeyDown;
         document.onkeyup = handleKeyUp;
 		canvas.onmousedown = handleMouseDown;
@@ -640,8 +758,9 @@
             <tr><td align="center"><b>Options</b></td>
             <tr><td><input type="checkbox" id="lighting" checked /> Use lighting</td></tr>
             <tr><td><input type="checkbox" id="createParticle" checked /> 
-            Create a Particle with a right mouse click.</td></tr>
+            Create a Particle on mouse click.</td></tr>
             <tr><td><input type="checkbox" id="collision" checked /> Use collision</td></tr>
+            <tr><td><input type="checkbox" id="updateParticles" checked /> Update Scene</td></tr>
             <tr><td><hr></td></tr>
             <tr><td><input type="checkbox" id="spring" checked /> Use Spring</td></tr>
             <tr><td><input type="checkbox" id="rod" checked /> Use Rod</td></tr>
@@ -677,6 +796,7 @@
     <tr><td><table style="border: 0; padding: 0;">
         <tr>
             <tr><td><b>Restitution:</b></td><td><input type="text" id="restitutionID" value="0.2" size="4"/></td>
+            <tr><td><b>Spring Constant:</b></td><td><input type="text" id="springConstID" value="1.6" size="4"/></td>
         </tr>
     </table></td></tr>
   

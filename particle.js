@@ -18,6 +18,8 @@ function Particle(radius_t, mass_t, damp_t)
 	this.vel = [0.0, 0.0, 0.0];
 	this.forceAccum = [0.0, 0.0, 0.0];
 	this.acc = [0.0, -9.8, 0.0];
+	
+	this.isSelected = 0;
 }
 
 Particle.prototype.kick = function(a,b)
@@ -81,7 +83,7 @@ Particle.prototype.draw = function()
 	mat4.multiply(mvMatrix, this.particleRotationMatrix);
 
 	gl.activeTexture(gl.TEXTURE0);
-	gl.bindTexture(gl.TEXTURE_2D, particleTexture);
+	gl.bindTexture(gl.TEXTURE_2D, particleTexture[this.isSelected]);
 	gl.uniform1i(shaderProgram.samplerUniform, 0);
 	
 	gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer);
