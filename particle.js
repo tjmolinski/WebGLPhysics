@@ -55,11 +55,11 @@ Particle.prototype.animate = function(elapsed)
 		
 	this.forceAccum = [0.0, 0.0, 0.0];
 	
-	/*if(this.pos[1] < -3.5)
+	if(this.pos[1] < -3.5)
 	{
 		this.pos[1] = -3.5;
 		this.vel[1] = -this.vel[1];
-	}*/
+	}
 }
 
 Particle.prototype.draw = function()

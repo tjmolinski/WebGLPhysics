@@ -13,6 +13,7 @@
 <script type="text/javascript" src="cable.js"></script>
 <script type="text/javascript" src="rod.js"></script>
 <script type="text/javascript" src="collisiongenerator.js"></script>
+<script type="text/javascript" src="GLU.js"></script>
 
 <script id="shader-fs" type="x-shader/x-fragment">
     #ifdef GL_ES
@@ -87,6 +88,8 @@
     var mvMatrix = mat4.create();	//Model View Matrix
     var mvMatrixStack = [];			//Model View Matrix Stack
     var pMatrix = mat4.create();	//Projection Matrix
+	var pMatrixInverse = mat4.create();
+	var eye = vec3.create([0,0,0]) ;  // negation of actual eye 
 	var currentlyPressedKeys = {};	//A buffer of key presses
 ////////////////////////////////////////////////////////////
 
@@ -239,26 +242,37 @@
 	var stiffspring;
 	var bungee;
 	var springConst;
-	
-	function get3dPoint(mx, my, width, height, projectionMatrix) 
-	{        
-		x = 2.0 * mx / width - 1;
-		y = - 2.0 * my / height + 1;
-
-		tmp = mat4.create();
-		viewProjectionInverse = mat4.create();
-		mat4.inverse(projectionMatrix, viewProjectionInverse);
-		ts = vec3.create();
-		ts[0] = x;
-		ts[1] = y;
-		ts[2] = 1;
-
-		mat4.multiplyVec3(viewProjectionInverse, ts, tmp);
-		return tmp;
-	}
 
     function handleMouseDown(event) 
 	{
+	  var world1 = [0,0,0,0] ;
+      var world2 = [0,0,0,0] ;
+      var dir = [0,0,0] ;
+      var w = gl.viewportWidth ;
+      var h = gl.viewportHeight ;
+	  //Why does this work? figure out why!!!!
+	  ///This works for 500x500 resolution//////
+      //var x = (event.clientX-w/1.92)/(w/2);
+      //var y = -(event.clientY-h/1.35)/(h/2);
+	  //////////////////////////////////////////
+	  //This works for 600x600 resolution///////
+      var x = (event.clientX-w/1.92)/(w/2) ;
+      var y = -(event.clientY-h/1.42)/(h/2) ;
+	  //////////////////////////////////////////
+      mat4.inverse(pMatrix, pMatrixInverse) ;
+      // convert clip space coordinates into world space
+      mat4.multiplyVec4(pMatrixInverse, [x,y,1,1], world1) ;
+      vec3.scale(world1,1/world1[3]) ;
+      mat4.multiplyVec4(pMatrixInverse, [x,y,depthPlacement,1], world2) ;
+      vec3.scale(world2,1/world2[3]) ;
+      // calculate world space view vector
+      vec3.subtract(world2,world1,dir) ;
+      vec3.normalize(dir) ;
+      //vec3.scale(dir,0.3) ;
+      // move eye in direction of world space view vector
+      /*vec3.subtract(eye,dir) ;
+      drawScene();
+      console.log(event)*/
 		if(createParticle)
 		{
 			lastMouseX = event.clientX;
@@ -266,11 +280,11 @@
 
 			var r = Math.random()*0.25+0.35;
 			var m = Math.floor(Math.random()*10 + 5);
-			get3dPoint(lastMouseX,lastMouseY, gl.viewportWidth, gl.viewportHeight, pMatrix);
+			//tmp = get3dPoint(lastMouseX,lastMouseY, gl.viewportWidth, gl.viewportHeight);
 			particles.push(new Particle(r,m,0.8));
-			particles[particles.length-1].pos[0] = tmp[0]*depthPlacement-r/2;// - r/2;
-			particles[particles.length-1].pos[1] = tmp[1]*depthPlacement+r*2;// - r/2;
-			particles[particles.length-1].pos[2] = tmp[2]*depthPlacement+r;
+			particles[particles.length-1].pos[0] = -dir[0]*depthPlacement;//*depthPlacement-r/2;// - r/2;
+			particles[particles.length-1].pos[1] = -dir[1]*depthPlacement;//*depthPlacement+r*2;// - r/2;
+			particles[particles.length-1].pos[2] = -dir[2]*depthPlacement;//*depthPlacement+r;
 			initBuffers();
 		}
 		else
@@ -279,8 +293,6 @@
 			lastMouseX = event.clientX;
 			lastMouseY = event.clientY;
 			
-			var tmp2 = mat4.create();
-			tmp2 = get3dPoint(lastMouseX,lastMouseY, gl.viewportWidth, gl.viewportHeight, pMatrix);
 			var xv;
 			var yv;
 			var zv;
@@ -292,15 +304,26 @@
 				{
 					found = false;
 
-					xv = (particles[i].pos[0] - tmp2[0]*depthPlacement +(particles[i].radius/2));
-					yv = (particles[i].pos[1] - tmp2[1]*depthPlacement -particles[i].radius*2);
-					zv = (particles[i].pos[2] - tmp2[2]*depthPlacement -particles[i].radius);
-
-
-					dist = Math.sqrt(xv*xv+yv*yv+zv*zv);
-
-
-					if(dist < particles[i].radius)
+					xv = (pMatrix[3] - (-dir[0]*depthPlacement));
+					yv = (pMatrix[7] - (-dir[1]*depthPlacement));
+					zv = (pMatrix[11] - (-dir[2]*depthPlacement));
+					distv = Math.sqrt(xv*xv+yv*yv+zv*zv);
+					xv /= distv;
+					yv /= distv;
+					zv /= distv;
+					
+					xx = (particles[i].pos[0] - pMatrix[3]);
+					yy = (particles[i].pos[1] - pMatrix[7]);
+					zz = (particles[i].pos[2] - pMatrix[11]);
+					dist = Math.sqrt(xx*xx+yy*yy+zz*zz);
+					xx /= dist;
+					yy /= dist;
+					zz /= dist;
+					
+					dot = xv*xx + yv*yy + zv*zz;
+					console.log(dot);
+					
+					if(dot < -.999)
 					{
 						for(var p in selectedParticles)
 						{
@@ -319,6 +342,7 @@
 						{	
 							particles[i].isSelected = 1;
 							selectedParticles.push(particles[i]);
+							break;
 						}
 					}
 				}
@@ -377,7 +401,7 @@
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);		
-
+		
 		for(var i in particles)
 		{
 			particles[i].draw();
@@ -716,7 +740,7 @@
 
 <table width="900">
 	<tr><td align="center"><h3>Ted Molinski &mdash; WebGL Physics &mdash; Brian Mushika</h3></td></tr>
-    <tr><td width="500"><canvas id="webgl_physics" style="border: none;" width="500" height="500"></canvas></td>
+    <tr><td width="600"><canvas id="webgl_physics" style="border: none;" width="600" height="600"></canvas></td>
     <td width="50"></td>
     <td><table><tr><td><table style="border: 0; padding: 0;">
             <tr><td align="center"><b>Options</b></td>
