@@ -13,7 +13,6 @@
 <script type="text/javascript" src="cable.js"></script>
 <script type="text/javascript" src="rod.js"></script>
 <script type="text/javascript" src="collisiongenerator.js"></script>
-<script type="text/javascript" src="plane.js"></script>
 
 <script id="shader-fs" type="x-shader/x-fragment">
     #ifdef GL_ES
@@ -73,7 +72,6 @@
 	var effectiveFPMS = 60/100000;		//Frames per millisecond
 	var depthPlacement = 10;			//This is how far we send particles back on mouse click
 	var lastTime = 0;					//Time of the last frame
-	var planes = Array();				//The list of planes
 	var stiffies = Array();				//The list of stiff springs
 	var cables = Array();				//The list of cables
 	var rods = Array();					//The list of rods
@@ -95,6 +93,12 @@
 ////////////////////////////////////////////////////////////
 //User controlled variables
 ////////////////////////////////////////////////////////////
+	var ceilingHeight;
+	var floorHeight;
+	var leftWallPosition;
+	var rightWallPosition;
+	var backWallPosition;
+	var frontWallPosition;
 	var lighting;
 	var createParticle;
 	var restitution;
@@ -107,6 +111,7 @@
 	var springConst;
 	var particleRadius;
 	var particleMass;
+	var planeRestitution;
 ////////////////////////////////////////////////////////////
 
     function initGL(canvas) {
@@ -259,7 +264,7 @@
 		//Why does this work? figure out why!!!!
 		///This works for 500x500 resolution//////
 		var x = (event.clientX-w/1.92)/(w/2);
-		var y = -(event.clientY-h/1.35)/(h/2);
+		var y = -(event.clientY-h/1.2)/(h/2);
 		//////////////////////////////////////////
 		//This works for 600x600 resolution///////
 		//var x = (event.clientX-w/1.92)/(w/2) ;
@@ -587,7 +592,10 @@
 			{
 				for(var t in particles)
 				{
-					planes[0].checkForHits(elapsed, particles[t]);
+					particles[t].contain(ceilingHeight, floorHeight,
+										leftWallPosition, rightWallPosition,
+										backWallPosition, frontWallPosition,
+										planeRestitution);
 					particles[t].animate(elapsed);
 				}	
 			}
@@ -601,8 +609,8 @@
 		depthPlacement = parseFloat(document.getElementById("depthID").value);
 		if(depthPlacement > 50.0)
 			document.getElementById("depthID").value = 50.0;
-		else if(depthPlacement < 1.0)
-			document.getElementById("depthID").value = 1.0;
+		else if(depthPlacement < 7.0)
+			document.getElementById("depthID").value = 7.0;
 			
 		particleMass = parseFloat(document.getElementById("massID").value);
 		if(particleMass < 0.0)
@@ -621,7 +629,15 @@
 		stiffspring = document.getElementById("stiffspring").checked;
 		bungee = document.getElementById("bungee").checked;
 		restitution = parseFloat(document.getElementById("restitutionID").value);
+		planeRestitution = parseFloat(document.getElementById("planeRestitutionID").value);
 		springConst = parseFloat(document.getElementById("springConstID").value);
+
+		ceilingHeight = parseFloat(document.getElementById("ceilingID").value);
+		floorHeight = parseFloat(document.getElementById("floorID").value);
+		leftWallPosition = parseFloat(document.getElementById("leftWallID").value);
+		rightWallPosition = parseFloat(document.getElementById("rightWallID").value);
+		backWallPosition = parseFloat(document.getElementById("backWallID").value);
+		frontWallPosition = parseFloat(document.getElementById("frontWallID").value);
 		
 		if(createParticle)
 		{
@@ -730,10 +746,6 @@
         initShaders();
         initTexture();
 		initBuffers();
-
-		pos = [0.0, -2.0, 0.0];
-		nor = [0.0, 1.0, 0.0];
-		planes.push(new Plane(pos, nor, 0.8));
 		
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.enable(gl.DEPTH_TEST);
@@ -773,7 +785,7 @@
 	<tr><td align="center"><b>Particle Properties</b></td></tr>
     <tr><td><table style="border: 0; padding: 0;">
         <tr>
-            <tr><td><b>Depth:</b></td><td><input type="text" id="depthID" value="-10.0" size="4"/></td>
+            <tr><td><b>Depth:</b></td><td><input type="text" id="depthID" value="10.0" size="4"/></td>
 			<td><b>Mass:</b></td><td><input type="text" id="massID" value="10.0" size="4"/></td>
 			<td><b>Radius:</b></td><td><input type="text" id="radiusID" value="0.25" size="4"/></td>
         </tr>
@@ -782,7 +794,6 @@
 	<tr><td align="center"><b>Kick Force</b></td></tr>
     <tr><td><table style="border: 0; padding: 0;">
  
-           <tr><td><b>Kick:</b></td>
            <td align="right">X: <input type="text" id="kickX" value="0.2" size="4"/></td>
            <td>Y: <input type="text" id="kickY" value="0.2" size="4"/></td>
            <td>Z: <input type="text" id="kickZ" value="0.2" size="4"/></td></tr>
@@ -810,12 +821,23 @@
             <td>R: <input type="text" id="directionalR" value="0.8" size="4"/></td>
             <td>G: <input type="text" id="directionalG" value="0.8" size="4"/></td>
             <td>B: <input type="text" id="directionalB" value="0.8" size="4"/></td></tr>
+    
+	</table></td></tr><tr><td align="center"><b>Walls</b></td></tr>
+    <tr><td><table style="border: 0; padding: 0;">
+
+            <td>Ceiling: <input type="text" id="ceilingID" value="4.0" size="4"/></td>
+            <td>Floor: <input type="text" id="floorID" value="-3.0"  size="4"/></td>
+            <td>Left: <input type="text" id="leftWallID" value="-4.0"  size="4"/></td>
+            <td>Right: <input type="text" id="rightWallID" value="4.0" size="4"/></td>
+            <td>Back: <input type="text" id="backWallID" value="-50.0" size="4"/></td>
+            <td>Front: <input type="text" id="frontWallID" value="-7.0" size="4"/></td></tr>
     </table></td></tr>
     
-	<tr><td align="center"><b>Restitution between particles</b></td></tr>
+	<tr><td align="center"><b>Constants:</b></td></tr>
     <tr><td><table style="border: 0; padding: 0;">
         <tr>
-            <tr><td><b>Restitution:</b></td><td><input type="text" id="restitutionID" value="0.2" size="4"/></td>
+            <tr><td><b>Particle Restitution:</b></td><td><input type="text" id="restitutionID" value="0.2" size="4"/></td>
+            <tr><td><b>Plane Restitution:</b></td><td><input type="text" id="planeRestitutionID" value="0.2" size="4"/></td>
             <tr><td><b>Spring Constant:</b></td><td><input type="text" id="springConstID" value="1.6" size="4"/></td>
         </tr>
     </table></td></tr>

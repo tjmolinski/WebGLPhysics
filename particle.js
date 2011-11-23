@@ -3,6 +3,8 @@
 ////////////////////////////////////////////////////////////
 function Particle(radius_t, mass_t, damp_t)
 {
+	this.VELOCITYMIN = 0.000001;
+
 	this.vertexPositionBuffer;
 	this.vertexNormalBuffer;
 	this.vertexTextureCoordBuffer;
@@ -22,6 +24,46 @@ function Particle(radius_t, mass_t, damp_t)
 	this.isSelected = 0;
 }
 
+Particle.prototype.contain = function(a,b,c,d,e,f,r)
+{
+	//Hit the right wall
+	if(this.pos[0] > d)
+	{
+		this.pos[0] = d;
+		this.vel[0] = -this.vel[0] * r;
+	}
+	//Hit the left wall
+	if(this.pos[0] < c)
+	{
+		this.pos[0] = c;
+		this.vel[0] = -this.vel[0] * r;
+	}
+	//Hit the ceiling
+	if(this.pos[1] > a)
+	{
+		this.pos[1] = a;
+		this.vel[1] = -this.vel[1] * r;
+	}
+	//Hit the floor
+	if(this.pos[1] < b)
+	{
+		this.pos[1] = b;
+		this.vel[1] = -this.vel[1] * r;
+	}
+	//Hit the back wall
+	if(this.pos[2] < e)
+	{
+		this.pos[2] = e;
+		this.vel[2] = -this.vel[2] * r;
+	}
+	//Hit the front wall
+	if(this.pos[2] > f)
+	{
+		this.pos[2] = f;
+		this.vel[2] = -this.vel[2] * r;
+	}
+}
+
 Particle.prototype.kick = function(x,y,z)
 {
 	if(this.mass <= 0.0)
@@ -37,6 +79,9 @@ Particle.prototype.animate = function(elapsed)
 	if(this.mass <= 0.0)
 		return;
 
+	if(Math.abs(this.vel[1]) < this.VELOCITYMIN)
+		this.vel[1] = 0;	
+		
 	this.pos[0] += this.vel[0] * elapsed;
 	this.pos[1] += this.vel[1] * elapsed;
 	this.pos[2] += this.vel[2] * elapsed;
