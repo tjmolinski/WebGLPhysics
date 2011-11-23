@@ -112,6 +112,8 @@
 	var particleRadius;
 	var particleMass;
 	var planeRestitution;
+	var mouseOffsetX;
+	var mouseOffsetY;
 ////////////////////////////////////////////////////////////
 
     function initGL(canvas) {
@@ -263,8 +265,8 @@
 		var h = gl.viewportHeight ;
 		//Why does this work? figure out why!!!!
 		///This works for 500x500 resolution//////
-		var x = (event.clientX-w/1.92)/(w/2);
-		var y = -(event.clientY-h/1.2)/(h/2);
+		var x = (event.clientX-w/mouseOffsetX)/(w/2);
+		var y = -(event.clientY-h/mouseOffsetY)/(h/2);
 		//////////////////////////////////////////
 		//This works for 600x600 resolution///////
 		//var x = (event.clientX-w/1.92)/(w/2) ;
@@ -525,7 +527,7 @@
 				}
 				if(stiffspring)
 				{
-					stiffies.push(new StiffSpring(selectedParticles[1], selectedParticles[0], dist, springConst/effectiveFPMS));
+					stiffies.push(new StiffSpring(selectedParticles[1], selectedParticles[0], 0.8, springConst/effectiveFPMS));
 					
 					clearSelectBuffer(selectedParticles);
 				}
@@ -619,6 +621,9 @@
 		particleRadius = parseFloat(document.getElementById("radiusID").value);
 		if(particleRadius < 0.0)
 			document.getElementById("radiusID").value = 0.0;
+		
+		mouseOffsetX = parseFloat(document.getElementById("mouseOffsetXID").value);
+		mouseOffsetY = parseFloat(document.getElementById("mouseOffsetYID").value);
 		
 		lighting = document.getElementById("lighting").checked;
 		createParticle = document.getElementById("createParticle").checked;
@@ -803,7 +808,7 @@
      <tr><td align="center"><b>Ambient light</b></td></tr>
     <tr><td><table style="border: 0; padding: 0;">
  
-           <tr><td><b>Colour:</b></td>
+           <tr><td><b>Ambient:</b></td>
            <td align="right">R: <input type="text" id="ambientR" value="0.2" size="4"/></td>
            <td>G: <input type="text" id="ambientG" value="0.2" size="4"/></td>
            <td>B: <input type="text" id="ambientB" value="0.2" size="4"/></td></tr>
@@ -839,6 +844,16 @@
             <tr><td><b>Particle Restitution:</b></td><td><input type="text" id="restitutionID" value="0.2" size="4"/></td>
             <tr><td><b>Plane Restitution:</b></td><td><input type="text" id="planeRestitutionID" value="0.2" size="4"/></td>
             <tr><td><b>Spring Constant:</b></td><td><input type="text" id="springConstID" value="1.6" size="4"/></td>
+        </tr>
+    </table></td></tr>
+	
+            <tr><td><hr></td></tr>
+	
+	<tr><td align="center"><b>MOUSE OFFSET USE ONLY IF OUR CLICKS ARE OFFSET</b></td></tr>
+    <tr><td><table style="border: 0; padding: 0;">
+        <tr>
+            <tr><td><b>X:</b></td><td><input type="text" id="mouseOffsetXID" value="1.92" size="4"/>
+            <td><b>Y:</b></td><td><input type="text" id="mouseOffsetYID" value="1.075" size="4"/></td>
         </tr>
     </table></td></tr>
   

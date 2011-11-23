@@ -22,7 +22,7 @@ StiffSpring.prototype.updateForce = function(elapsed)
 {    	
 	var forceX, forceY, forceZ;
 	
-	if(this.anchor.mass != 0.0)
+	if(this.anchor.mass > 0.0)
 		return;
 	
 	//Calculating the vector of the stiff spring/////////////////////
@@ -55,9 +55,9 @@ StiffSpring.prototype.updateForce = function(elapsed)
 	a[2] = (t[2] - forceZ) * (1.0/(elapsed*elapsed)) - this.particle.vel[2] * elapsed;
 	
 	//Now applying the force to the particle///////////////////
-	this.particle.forceAccum[0] += a[0] * this.particle.mass;
-	this.particle.forceAccum[1] += a[1] * this.particle.mass;
-	this.particle.forceAccum[2] += a[2] * this.particle.mass;
+	this.particle.forceAccum[0] += a[0] * 1.0/this.particle.mass;
+	this.particle.forceAccum[1] += a[1] * 1.0/this.particle.mass;
+	this.particle.forceAccum[2] += a[2] * 1.0/this.particle.mass;
 	///////////////////////////////////////////////////////////
 }
 
