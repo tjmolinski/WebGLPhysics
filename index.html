@@ -561,6 +561,18 @@
 				bungees[o].updateForce(elapsed);
 			}
 			
+			
+			if(document.getElementById("updateParticles").checked)
+			{
+				for(var t in particles)
+				{
+					particles[t].contain(ceilingHeight, floorHeight,
+										leftWallPosition, rightWallPosition,
+										backWallPosition, frontWallPosition,
+										planeRestitution);
+					particles[t].animate(elapsed);
+				}	
+			}
 
 			if (document.getElementById("collision").checked) 
 			{
@@ -588,18 +600,6 @@
 						}
 					}
 				}
-			}
-			
-			if(document.getElementById("updateParticles").checked)
-			{
-				for(var t in particles)
-				{
-					particles[t].contain(ceilingHeight, floorHeight,
-										leftWallPosition, rightWallPosition,
-										backWallPosition, frontWallPosition,
-										planeRestitution);
-					particles[t].animate(elapsed);
-				}	
 			}
 		}
 
@@ -853,7 +853,7 @@
     <tr><td><table style="border: 0; padding: 0;">
         <tr>
             <tr><td><b>X:</b></td><td><input type="text" id="mouseOffsetXID" value="1.92" size="4"/>
-            <td><b>Y:</b></td><td><input type="text" id="mouseOffsetYID" value="1.075" size="4"/></td>
+            <td><b>Y:</b></td><td><input type="text" id="mouseOffsetYID" value="1.20" size="4"/></td>
         </tr>
     </table></td></tr>
   

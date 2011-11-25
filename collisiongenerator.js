@@ -24,7 +24,8 @@ CollisionGenerator.prototype.resolveInterpenetration = function()
 	if(this.penetration <= 0)
 		return;
 		
-	totalIMass = 1.0/(this.particle1.mass + this.particle2.mass);
+	//THIS NEEDS TO BE UPDATED TO CHECK IF MASSES ARE ZERO
+	totalIMass = 1.0/this.particle1.mass + 1.0/this.particle2.mass;
 	
 	if(totalIMass <= 0)
 		return;
@@ -97,8 +98,10 @@ CollisionGenerator.prototype.resolveVelocity = function(elapsed)
 			newSepVel = 0;
 	}
 	
-	deltaVel = (newSepVel - separatingVelocity);// * this.restitution;
-	totalIMass = 1.0/(this.particle1.mass + this.particle2.mass);
+	deltaVel = (newSepVel - separatingVelocity) * this.restitution;
+	
+	//THIS NEEDS TO BE UPDATED TO CHECK IF MASSES ARE ZERO
+	totalIMass = 1.0/this.particle1.mass + 1.0/this.particle2.mass;
 	
 	if(totalIMass <= 0)
 		return;
