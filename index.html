@@ -80,12 +80,12 @@
 	var particles = Array();			//The list of particles
 	var contacts = Array();				//The list of collisions
 	var selectedParticles = Array();	//The list of selected particles
-    var particleTexture = Array();		//A texture used for the particles
-    var gl;								//The gl program
-    var shaderProgram;					//The shader program
-    var mvMatrix = mat4.create();		//Model View Matrix
-    var mvMatrixStack = [];				//Model View Matrix Stack
-    var pMatrix = mat4.create();		//Projection Matrix
+  var particleTexture = Array();		//A texture used for the particles
+  var gl;								//The gl program
+  var shaderProgram;					//The shader program
+  var mvMatrix = mat4.create();		//Model View Matrix
+  var mvMatrixStack = [];				//Model View Matrix Stack
+  var pMatrix = mat4.create();		//Projection Matrix
 	var pMatrixInverse = mat4.create();	//Projection Inverse Matrix
 	var currentlyPressedKeys = {};		//A buffer of key presses
 ////////////////////////////////////////////////////////////
@@ -196,7 +196,7 @@
         shaderProgram.lightingDirectionUniform = gl.getUniformLocation(shaderProgram, "uLightingDirection");
         shaderProgram.directionalColorUniform = gl.getUniformLocation(shaderProgram, "uDirectionalColor");
     }
-	
+
 	function handleLoadedTexture(textures) {
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
@@ -212,25 +212,28 @@
 
         gl.bindTexture(gl.TEXTURE_2D, null);
     }
-	
+
     function initTexture() {
-        var particleImage = new Image();
-		var selectedImage = new Image();
+      var particleImage = new Image();
+		  var selectedImage = new Image();
 
-        for (var i=0; i < 2; i++) {
-            var texture = gl.createTexture();
-			if(i == 0)
-				texture.image = particleImage;
-			else
-				texture.image = selectedImage;
-            particleTexture.push(texture);
-        }
+      for (var i=0; i < 2; i++) {
+        var texture = gl.createTexture();
 
-        particleImage.onload = function () {
-            handleLoadedTexture(particleTexture)
-        }
-        particleImage.src = "particle.gif";
-        selectedImage.src = "selected.gif";
+        if(i == 0)
+				  texture.image = particleImage;
+  			else
+	  			texture.image = selectedImage;
+
+        particleTexture.push(texture);
+      }
+
+      particleImage.onload = function () {
+        handleLoadedTexture(particleTexture)
+      }
+
+      particleImage.src = "particle.gif";
+      selectedImage.src = "selected.gif";
     }
 
     function mvPushMatrix() {
@@ -256,128 +259,31 @@
         gl.uniformMatrix3fv(shaderProgram.nMatrixUniform, false, normalMatrix);
     }
 
-    function handleMouseDown(event) 
-	{
-		var world1 = [0,0,0,0] ;
-		var world2 = [0,0,0,0] ;
-		var dir = [0,0,0] ;
-		var w = gl.viewportWidth ;
-		var h = gl.viewportHeight ;
-		//Why does this work? figure out why!!!!
-		///This works for 500x500 resolution//////
-		var x = (event.clientX-w/mouseOffsetX)/(w/2);
-		var y = -(event.clientY-h/mouseOffsetY)/(h/2);
-		//////////////////////////////////////////
-		//This works for 600x600 resolution///////
-		//var x = (event.clientX-w/1.92)/(w/2) ;
-		//var y = -(event.clientY-h/1.42)/(h/2) ;
-		//////////////////////////////////////////
-		mat4.inverse(pMatrix, pMatrixInverse) ;
-		// convert clip space coordinates into world space
-		mat4.multiplyVec4(pMatrixInverse, [x,y,1,1], world1) ;
-		vec3.scale(world1,1/world1[3]) ;
-		mat4.multiplyVec4(pMatrixInverse, [x,y,depthPlacement,1], world2) ;
-		vec3.scale(world2,1/world2[3]) ;
-		// calculate world space view vector
-		vec3.subtract(world2,world1,dir) ;
-		vec3.normalize(dir);
 
-		if(createParticle)
-		{
-			lastMouseX = event.clientX;
-			lastMouseY = event.clientY;
-
-			particles.push(new Particle(particleRadius,particleMass,0.8));
-			particles[particles.length-1].pos[0] = -dir[0]*depthPlacement;
-			particles[particles.length-1].pos[1] = -dir[1]*depthPlacement;
-			particles[particles.length-1].pos[2] = -dir[2]*depthPlacement;
-			initBuffers();
-		}
-		else
-		{
-			var xv;
-			var yv;
-			var zv;
-			var dist;
-			
-			if(particles.length > 0)
-			{
-				for(var i in particles)
-				{
-					found = false;
-
-					xv = (pMatrix[3] - (-dir[0]*depthPlacement));
-					yv = (pMatrix[7] - (-dir[1]*depthPlacement));
-					zv = (pMatrix[11] - (-dir[2]*depthPlacement));
-					distv = Math.sqrt(xv*xv+yv*yv+zv*zv);
-					xv /= distv;
-					yv /= distv;
-					zv /= distv;
-					
-					xx = (particles[i].pos[0] - pMatrix[3]);
-					yy = (particles[i].pos[1] - pMatrix[7]);
-					zz = (particles[i].pos[2] - pMatrix[11]);
-					dist = Math.sqrt(xx*xx+yy*yy+zz*zz);
-					xx /= dist;
-					yy /= dist;
-					zz /= dist;
-					
-					dot = xv*xx + yv*yy + zv*zz;
-					
-					if(dot < -.999)
-					{
-						for(var p in selectedParticles)
-						{
-							if(selectedParticles[p]==particles[i])
-							{
-								selectedParticles[p].isSelected = 0;
-								selectedParticles.splice(p, 1);
-								found = true;
-								break;
-							}
-						}
-						
-						if(found)
-							break;
-						if( selectedParticles.length != 2 )
-						{	
-							particles[i].isSelected = 1;
-							selectedParticles.push(particles[i]);
-							break;
-						}
-					}
-				}
-			}
-		}
-    }
-    
-
-    function handleKeyDown(event) 
+    function handleKeyDown(event)
 	{
         currentlyPressedKeys[event.keyCode] = true;
     }
 
-    function handleKeyUp(event) 
+    function handleKeyUp(event)
 	{
         currentlyPressedKeys[event.keyCode] = false;
     }
 
-    function handleKeys() 
+    function handleKeys()
 	{
-        if (currentlyPressedKeys[32]) 
+        if (currentlyPressedKeys[32])
 		{
-            // Pressed space bar
-			x = parseFloat(document.getElementById("kickX").value);
-			y = parseFloat(document.getElementById("kickY").value);
-			z = parseFloat(document.getElementById("kickZ").value);
-			if(selectedParticles.length > 0)
-				selectedParticles[0].kick(x/effectiveFPMS,y/effectiveFPMS,z/effectiveFPMS);
-			if(selectedParticles.length > 1)
-				selectedParticles[1].kick(x/effectiveFPMS,y/effectiveFPMS,z/effectiveFPMS);
-		}
+      console.log("Create Particle");
+        particles.push(new Particle(0.1,particleMass,0.8));
+        particles[particles.length-1].pos[0] = 0;
+        particles[particles.length-1].pos[1] = 0;
+        particles[particles.length-1].pos[2] = -20;
+      	initBuffers();
     }
+  }
 
-    function degToRad(degrees) 
+    function degToRad(degrees)
 	{
         return degrees * Math.PI / 180;
     }
@@ -387,11 +293,11 @@
 		var xv = (p1.pos[0] - p2.pos[0]);
 		var yv = (p1.pos[1] - p2.pos[1]);
 		var zv = (p1.pos[2] - p2.pos[2]);
-		
-		
+
+
 		return Math.sqrt(xv*xv+yv*yv+zv*zv);
 	}
-	
+
 	function clearSelectBuffer(a)
 	{
 		p = a.pop();
@@ -404,12 +310,12 @@
         gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);		
-		
+        mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+
 		for(var i in particles)
 		{
 			particles[i].draw();
-		}	
+		}
 
     }
 
@@ -500,265 +406,47 @@
 		{
 			var elapsed = timeNow - lastTime;
 			elapsed *= effectiveFPMS;
-			
-			
-			if(selectedParticles.length == 2)
-			{
-			
-				var dist = magnitude(selectedParticles[0], selectedParticles[1]);
-				if(rod)
-				{
-					rods.push(new Rod(selectedParticles[0], selectedParticles[1], dist));
-				
-					clearSelectBuffer(selectedParticles);
-				}
-				if(cable)
-				{
-					cables.push(new Cable(selectedParticles[0], selectedParticles[1], dist, 0.0));
-					
-					clearSelectBuffer(selectedParticles);
-				}
-				if(spring)
-				{
-					springs.push(new Spring(selectedParticles[0], selectedParticles[1], dist, springConst/effectiveFPMS));
-					springs.push(new Spring(selectedParticles[1],selectedParticles[0], dist, springConst/effectiveFPMS));
-					
-					clearSelectBuffer(selectedParticles);
-				}
-				if(stiffspring)
-				{
-					stiffies.push(new StiffSpring(selectedParticles[1], selectedParticles[0], 0.8, springConst/effectiveFPMS));
-					
-					clearSelectBuffer(selectedParticles);
-				}
-				if(bungee)
-				{
-					bungees.push(new Bungee(selectedParticles[1], selectedParticles[0], dist, springConst/effectiveFPMS));
-					bungees.push(new Bungee(selectedParticles[0], selectedParticles[1], dist, springConst/effectiveFPMS));
-					
-					clearSelectBuffer(selectedParticles);
-				}
-			}
-			
-			for(var l in cables)
-			{
-				cables[l].updateForce(elapsed);
-			}
-			for(var h in rods)
-			{
-				rods[h].updateForce(elapsed);
-			}
-			for(var q in stiffies)
-			{
-				stiffies[q].updateForce(elapsed);
-			}
-			for(var p in springs)
-			{
-				springs[p].updateForce(elapsed);
-			}
-			for(var o in bungees)
-			{
-				bungees[o].updateForce(elapsed);
-			}
-			
-			
-			if(document.getElementById("updateParticles").checked)
-			{
-				for(var t in particles)
-				{
-					particles[t].contain(ceilingHeight, floorHeight,
-										leftWallPosition, rightWallPosition,
-										backWallPosition, frontWallPosition,
-										planeRestitution);
-					particles[t].animate(elapsed);
-				}	
-			}
+		 }
 
-			if (document.getElementById("collision").checked) 
-			{
-				//This is finding all the collisions
-				//then it handles the collisions that happen first
-				for(var i=0; i < particles.length; i++)
-				{		
-					for(var u=0; u < particles.length; u++)
-					{
-						if(i == u)
-							continue;
-
-						var distX = particles[i].pos[0] - particles[u].pos[0];
-						var distY = particles[i].pos[1] - particles[u].pos[1];
-						var distZ = particles[i].pos[2] - particles[u].pos[2];
-						var distance = Math.sqrt(distX*distX+distY*distY+distZ*distZ);
-
-						var cNorm = [distX/distance, distY/distance, distZ/distance];
-						if(distance < particles[i].radius+particles[u].radius)
-						{
-							tmp = new CollisionGenerator(particles[i], particles[u], particles[i].radius+particles[u].radius-distance,
-													     cNorm, parseFloat(document.getElementById("restitutionID").value));
-							tmp.resolve(elapsed);
-							delete tmp;
-						}
-					}
-				}
-			}
-		}
+    	for(var t in particles)
+{
+  particles[t].contain(ceilingHeight, floorHeight,
+  leftWallPosition, rightWallPosition,
+  backWallPosition, frontWallPosition,
+  planeRestitution);
+  particles[t].animate(elapsed);
+}
 
 		lastTime = timeNow;
 	}
 
-	function updateQueries()
-	{
-		depthPlacement = parseFloat(document.getElementById("depthID").value);
-		if(depthPlacement > 50.0)
-			document.getElementById("depthID").value = 50.0;
-		else if(depthPlacement < 7.0)
-			document.getElementById("depthID").value = 7.0;
-			
-		particleMass = parseFloat(document.getElementById("massID").value);
-		if(particleMass < 0.0)
-			document.getElementById("massID").value = 0.0;
-		
-		particleRadius = parseFloat(document.getElementById("radiusID").value);
-		if(particleRadius < 0.0)
-			document.getElementById("radiusID").value = 0.0;
-		
-		mouseOffsetX = parseFloat(document.getElementById("mouseOffsetXID").value);
-		mouseOffsetY = parseFloat(document.getElementById("mouseOffsetYID").value);
-		
-		lighting = document.getElementById("lighting").checked;
-		createParticle = document.getElementById("createParticle").checked;
-		collision = document.getElementById("collision").checked;
-		spring = document.getElementById("spring").checked;
-		rod = document.getElementById("rod").checked;
-		cable = document.getElementById("cable").checked;
-		stiffspring = document.getElementById("stiffspring").checked;
-		bungee = document.getElementById("bungee").checked;
-		restitution = parseFloat(document.getElementById("restitutionID").value);
-		planeRestitution = parseFloat(document.getElementById("planeRestitutionID").value);
-		springConst = parseFloat(document.getElementById("springConstID").value);
 
-		ceilingHeight = parseFloat(document.getElementById("ceilingID").value);
-		floorHeight = parseFloat(document.getElementById("floorID").value);
-		leftWallPosition = parseFloat(document.getElementById("leftWallID").value);
-		rightWallPosition = parseFloat(document.getElementById("rightWallID").value);
-		backWallPosition = parseFloat(document.getElementById("backWallID").value);
-		frontWallPosition = parseFloat(document.getElementById("frontWallID").value);
-		
-		if(createParticle)
-		{
-			document.getElementById("spring").disabled=true;
-			document.getElementById("rod").disabled=true;
-			document.getElementById("cable").disabled=true;
-			document.getElementById("stiffspring").disabled=true;
-			document.getElementById("bungee").disabled=true;
-
-			document.getElementById("spring").checked=false;
-			document.getElementById("rod").checked=false;
-			document.getElementById("cable").checked=false;
-			document.getElementById("stiffspring").checked=false;
-			document.getElementById("bungee").checked=false;
-		}
-		else 
-		{
-			document.getElementById("spring").disabled=false;
-			document.getElementById("rod").disabled=false;
-			document.getElementById("cable").disabled=false;
-			document.getElementById("stiffspring").disabled=false;
-			document.getElementById("bungee").disabled=false;
-		}
-
-		if(spring)
-		{
-			document.getElementById("spring").checked=false;
-			document.getElementById("rod").checked=false;
-			document.getElementById("cable").checked=false;
-			document.getElementById("stiffspring").checked=false;
-			document.getElementById("bungee").checked=false;
-		}
-		if(rod)
-		{
-			document.getElementById("spring").checked=false;
-			document.getElementById("rod").checked=false;
-			document.getElementById("cable").checked=false;
-			document.getElementById("stiffspring").checked=false;
-			document.getElementById("bungee").checked=false;
-		}
-
-		if(cable)
-		{
-			document.getElementById("spring").checked=false;
-			document.getElementById("rod").checked=false;
-			document.getElementById("cable").checked=false;
-			document.getElementById("stiffspring").checked=false;
-			document.getElementById("bungee").checked=false;
-		}
-		if(stiffspring)
-		{
-			document.getElementById("spring").checked=false;
-			document.getElementById("rod").checked=false;
-			document.getElementById("cable").checked=false;
-			document.getElementById("stiffspring").checked=false;
-			document.getElementById("bungee").checked=false;
-		}
-		if(bungee)
-		{
-			document.getElementById("spring").checked=false;
-			document.getElementById("rod").checked=false;
-			document.getElementById("cable").checked=false;
-			document.getElementById("stiffspring").checked=false;
-			document.getElementById("bungee").checked=false;
-		}
-
-        gl.uniform1i(shaderProgram.useLightingUniform, lighting);
-        if (lighting) {
-            gl.uniform3f(
-                shaderProgram.ambientColorUniform,
-                parseFloat(document.getElementById("ambientR").value),
-                parseFloat(document.getElementById("ambientG").value),
-                parseFloat(document.getElementById("ambientB").value)
-            );
-
-            var lightingDirection = [
-                parseFloat(document.getElementById("lightDirectionX").value),
-                parseFloat(document.getElementById("lightDirectionY").value),
-                parseFloat(document.getElementById("lightDirectionZ").value)
-            ];
-            var adjustedLD = vec3.create();
-            vec3.normalize(lightingDirection, adjustedLD);
-            vec3.scale(adjustedLD, -1);
-            gl.uniform3fv(shaderProgram.lightingDirectionUniform, adjustedLD);
-
-            gl.uniform3f(
-                shaderProgram.directionalColorUniform,
-                parseFloat(document.getElementById("directionalR").value),
-                parseFloat(document.getElementById("directionalG").value),
-                parseFloat(document.getElementById("directionalB").value)
-            );
-        }
-	}
-	
-    function tick() {
+   function tick() {
         requestAnimFrame(tick);
-		updateQueries();
         handleKeys();
         drawScene();
         animate();
     }
 
+  function initQueries() {
+    depthPlacement = 50.0;
+    particleMass = 2.0;
+    particleRadius = 1.0;
+  }
+
     function webGLStart() {
         var canvas = document.getElementById("webgl_physics");
         initGL(canvas);
+        initQueries();
         initShaders();
         initTexture();
-		initBuffers();
-		
-        gl.clearColor(0.0, 0.0, 0.0, 1.0);
-        gl.enable(gl.DEPTH_TEST);
+		    initBuffers();
 
         document.onkeydown = handleKeyDown;
         document.onkeyup = handleKeyUp;
-		canvas.onmousedown = handleMouseDown;
-        //canvas.onmouseup = handleMouseUp;
+
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.enable(gl.DEPTH_TEST);
 
         tick();
     }
@@ -768,97 +456,7 @@
 
 </head>
 <body onLoad="webGLStart();">
-
-<table width="900">
-	<tr><td align="center"><h3>Ted Molinski &mdash; WebGL Physics &mdash; Brian Mushika</h3></td></tr>
-    <tr><td width="500"><canvas id="webgl_physics" style="border: none;" width="500" height="500"></canvas></td>
-    <td width="50"></td>
-    <td><table><tr><td><table style="border: 0; padding: 0;">
-            <tr><td align="center"><b>Options</b></td>
-            <tr><td><input type="checkbox" id="lighting" checked /> Use lighting</td></tr>
-            <tr><td><input type="checkbox" id="createParticle" checked /> Create particle.</td></tr>
-            <tr><td><input type="checkbox" id="collision" checked /> Use collision</td></tr>
-            <tr><td><input type="checkbox" id="updateParticles" checked /> Update Scene</td></tr>
-            <tr><td><hr></td></tr>
-            <tr><td><input type="checkbox" id="spring" checked /> Use Spring</td></tr>
-            <tr><td><input type="checkbox" id="rod" checked /> Use Rod</td></tr>
-            <tr><td><input type="checkbox" id="cable" checked /> Use Cable</td></tr>
-            <tr><td><input type="checkbox" id="stiffspring" checked /> Use Stiff Spring</td></tr>
-            <tr><td><input type="checkbox" id="bungee" checked /> Use Bungee</td></tr>
-    </table></td></tr>
-    
-	<tr><td align="center"><b>Particle Properties</b></td></tr>
-    <tr><td><table style="border: 0; padding: 0;">
-        <tr>
-            <tr><td><b>Depth:</b></td><td><input type="text" id="depthID" value="10.0" size="4"/></td>
-			<td><b>Mass:</b></td><td><input type="text" id="massID" value="10.0" size="4"/></td>
-			<td><b>Radius:</b></td><td><input type="text" id="radiusID" value="0.25" size="4"/></td>
-        </tr>
-    </table></td></tr>
-	
-	<tr><td align="center"><b>Kick Force</b></td></tr>
-    <tr><td><table style="border: 0; padding: 0;">
- 
-           <td align="right">X: <input type="text" id="kickX" value="0.2" size="4"/></td>
-           <td>Y: <input type="text" id="kickY" value="0.2" size="4"/></td>
-           <td>Z: <input type="text" id="kickZ" value="0.2" size="4"/></td></tr>
- 
-    </table></td></tr>
-	
-     <tr><td align="center"><b>Ambient light</b></td></tr>
-    <tr><td><table style="border: 0; padding: 0;">
- 
-           <tr><td><b>Ambient:</b></td>
-           <td align="right">R: <input type="text" id="ambientR" value="0.2" size="4"/></td>
-           <td>G: <input type="text" id="ambientG" value="0.2" size="4"/></td>
-           <td>B: <input type="text" id="ambientB" value="0.2" size="4"/></td></tr>
- 
-    </table></td></tr>
-    
-    <tr><td align="center"><b>Directional light</b></td></tr>
-    <tr><td><table style="border: 0; padding: 0;">
-    
-            <tr><td><b>Direction:</b></td>
-            <td>X: <input type="text" id="lightDirectionX" value="-1.0" size="4"/></td>
-            <td>Y: <input type="text" id="lightDirectionY" value="-1.0"  size="4"/></td>
-            <td>Z: <input type="text" id="lightDirectionZ" value="-1.0"  size="4"/></td></tr>
-            <tr><td><b>Colour:</b></td>
-            <td>R: <input type="text" id="directionalR" value="0.8" size="4"/></td>
-            <td>G: <input type="text" id="directionalG" value="0.8" size="4"/></td>
-            <td>B: <input type="text" id="directionalB" value="0.8" size="4"/></td></tr>
-    
-	</table></td></tr><tr><td align="center"><b>Walls</b></td></tr>
-    <tr><td><table style="border: 0; padding: 0;">
-
-            <td>Ceiling: <input type="text" id="ceilingID" value="4.0" size="4"/></td>
-            <td>Floor: <input type="text" id="floorID" value="-3.0"  size="4"/></td>
-            <td>Left: <input type="text" id="leftWallID" value="-4.0"  size="4"/></td>
-            <td>Right: <input type="text" id="rightWallID" value="4.0" size="4"/></td>
-            <td>Back: <input type="text" id="backWallID" value="-50.0" size="4"/></td>
-            <td>Front: <input type="text" id="frontWallID" value="-7.0" size="4"/></td></tr>
-    </table></td></tr>
-    
-	<tr><td align="center"><b>Constants:</b></td></tr>
-    <tr><td><table style="border: 0; padding: 0;">
-        <tr>
-            <tr><td><b>Particle Restitution:</b></td><td><input type="text" id="restitutionID" value="0.2" size="4"/></td>
-            <tr><td><b>Plane Restitution:</b></td><td><input type="text" id="planeRestitutionID" value="0.2" size="4"/></td>
-            <tr><td><b>Spring Constant:</b></td><td><input type="text" id="springConstID" value="1.6" size="4"/></td>
-        </tr>
-    </table></td></tr>
-	
-            <tr><td><hr></td></tr>
-	
-	<tr><td align="center"><b>MOUSE OFFSET USE ONLY IF OUR CLICKS ARE OFFSET</b></td></tr>
-    <tr><td><table style="border: 0; padding: 0;">
-        <tr>
-            <tr><td><b>X:</b></td><td><input type="text" id="mouseOffsetXID" value="1.92" size="4"/>
-            <td><b>Y:</b></td><td><input type="text" id="mouseOffsetYID" value="1.20" size="4"/></td>
-        </tr>
-    </table></td></tr>
-  
-  </table></td></tr>
-  <tr><td> This was done with the help of "<a href="http://learningwebgl.com/blog/">Learning WebGL</a>" tutorials.</td></tr></table>
+<canvas id="webgl_physics" style="border: none;" width="500" height="500"></canvas>
 </body>
 
 </html>
