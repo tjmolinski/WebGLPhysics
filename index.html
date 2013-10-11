@@ -116,6 +116,8 @@
 	var mouseOffsetY;
 ////////////////////////////////////////////////////////////
 
+  var particleCreateTime = 1000;
+  var particleTimeBuffer = 0;
     function initGL(canvas) {
         try {
             gl = canvas.getContext("experimental-webgl");
@@ -274,13 +276,16 @@
 	{
         if (currentlyPressedKeys[32])
 		{
-      console.log("Create Particle");
-        particles.push(new Particle(0.1,particleMass,0.8));
-        particles[particles.length-1].pos[0] = 0;
-        particles[particles.length-1].pos[1] = 0;
-        particles[particles.length-1].pos[2] = -20;
-      	initBuffers();
+        createParticle();
     }
+  }
+
+  function createParticle() {
+    particles.push(new Particle(0.1,particleMass,0.8));
+    particles[particles.length-1].pos[0] = 0;
+    particles[particles.length-1].pos[1] = 0;
+    particles[particles.length-1].pos[2] = -20;
+    initBuffers();
   }
 
     function degToRad(degrees)
@@ -408,12 +413,15 @@
 			elapsed *= effectiveFPMS;
 		 }
 
+    particleTimeBuffer += effectiveFPMS;
+    if(particleTimeBuffer > 0.01) {
+      //TODO: ADD RECYCLING OR DEATH OF PARTICLES
+      particleTimeBuffer = 0;
+      createParticle();
+    }
+
     	for(var t in particles)
 {
-  particles[t].contain(ceilingHeight, floorHeight,
-  leftWallPosition, rightWallPosition,
-  backWallPosition, frontWallPosition,
-  planeRestitution);
   particles[t].animate(elapsed);
 }
 
