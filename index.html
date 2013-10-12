@@ -414,10 +414,14 @@
 		 }
 
     particleTimeBuffer += effectiveFPMS;
-    if(particleTimeBuffer > 0.01) {
-      //TODO: ADD RECYCLING OR DEATH OF PARTICLES
+    if(particles.length > 30) {
+      particles.splice(0, 1);
+    } else {
+
+    if(particleTimeBuffer > 0.001) {
       particleTimeBuffer = 0;
       createParticle();
+    }
     }
 
     	for(var t in particles)

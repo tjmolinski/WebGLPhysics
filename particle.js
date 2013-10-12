@@ -17,9 +17,9 @@ function Particle(radius_t, mass_t, damp_t)
 	this.mass = mass_t;
 	this.damping = damp_t;
 	this.pos = [0.0, 0.0, 0.0];
-	this.vel = [0.0, 0.0, 0.0];
+	this.vel = [(Math.random()*10)-5, (Math.random()*10)-5, 0.0];//[0.0, 0.0, 0.0];
 	this.forceAccum = [0.0, 0.0, 0.0];
-	this.acc = [(Math.random()*10)-5, (Math.random()*10)-5, 0.0];
+	this.acc = [0.0, -9.8, 0.0];//[(Math.random()*10)-5, (Math.random()*10)-5, 0.0];
 
 	this.isSelected = 0;
 }
